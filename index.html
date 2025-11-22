@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stadium Booking</title>
+    
+    <!-- React & Firebase -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111;
+            background-image: url('https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1920&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #1e293b;
+        }
+        .backdrop-blur-md { backdrop-filter: blur(12px); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .content-padding { padding-top: 100px; }
+        
+        .sticky-header {
+            position: fixed;
+            top: 0; left: 0; right: 0; z-index: 50;
+            background: rgba(30, 27, 75, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        
+        .admin-panel { animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- Error Handling ---
+        window.onerror = function(msg) {
+            const root = document.getElementById('root');
+            if(!root.innerHTML) root.innerHTML = `<div style="color:white;text-align:center;padding:50px;"><h2>⚠️ Error</h2><p>${msg}</p><button onclick="location.reload()" style="background:white;color:black;padding:10px;margin-top:10px;">Reload</button></div>`;
+        };
+
+        // --- Firebase Config ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQdadpjEYK8zjroLVVRNuW_x-IGSBIpB0",
+            authDomain: "malaebapp-d6409.firebaseapp.com",
+            projectId: "malaebapp-d6409",
+            storageBucket: "malaebapp-d6409.firebasestorage.app",
+            messagingSenderId: "267701606872",
+            appId: "1:267701606872:web:72f422d358a7a6d5debaad",
+            measurementId: "G-0Y5EXZ7PR9"
+        };
+        
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const appId = 'my-stadium-app-v1';
+
+        // --- Icons ---
+        const Icons = {
+            UserPlus: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>,
+            Trash2: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+            Lock: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+            Unlock: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>,
+            Settings: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+            Clock: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            Share: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+            Edit2: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
+            Check: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+            X: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+            Shield: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+            Copy: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+            Image: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
+            Upload: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+            Eye: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+            CreditCard: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+            Plus: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+            Calendar: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+            List: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+            Activity: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+            Home: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+            LogOut: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+            Key: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
+            TimerOff: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 13a9 9 0 1 0 9-9M12 7v5l3 3"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        };
+
+        const MASTER_KEY = "Football@b7"; 
+        const IMAGE_SIZE_LIMIT_KB = 700;
+        const EXPIRATION_HOURS = 72;
+        const EXPIRATION_MS = EXPIRATION_HOURS * 60 * 60 * 1000;
+        
+        const getTodayDate = () => {
+            const d = new Date();
+            let month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+            return [year, month, day].join('-');
+        }
+
+        const DEFAULT_CONFIG = { 
+            title: 'Stadium Booking', 
+            maxPlayers: 12, 
+            matchDate: getTodayDate(),
+            startTime: '20:00', 
+            endTime: '21:00', 
+            totalCost: 100, 
+            adminPassword: 'Admin1234', 
+            currency: 'RM', 
+            paymentInfoImage: null,
+            withdrawalTime: '18:00'
+        };
+
+        const { useState, useEffect, useRef } = React;
+
+        function App() {
+            // App State
+            const [view, setView] = useState('LOADING'); 
+            const [bookingId, setBookingId] = useState(null);
+            const [user, setUser] = useState(null);
+            
+            // Data
+            const [players, setPlayers] = useState([]);
+            const [config, setConfig] = useState(DEFAULT_CONFIG);
+            const [myBookings, setMyBookings] = useState([]);
+
+            // UI
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [showAdminAuth, setShowAdminAuth] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const [newPasswordInput, setNewPasswordInput] = useState('');
+            const [newName, setNewName] = useState('');
+            const [toast, setToast] = useState(null);
+            
+            // Modals
+            const [viewImage, setViewImage] = useState(null);
+            const [showTeamGen, setShowTeamGen] = useState(false);
+            const [teamCount, setTeamCount] = useState(2); 
+            const [showCreateModal, setShowCreateModal] = useState(false);
+            
+            // Create Modal State
+            const [newBookingConfig, setNewBookingConfig] = useState({ title: 'Friendly Match' });
+            const [shareMsg, setShareMsg] = useState('');
+            const [showManualShare, setShowManualShare] = useState(false);
+
+            const fileInputRef = useRef(null);
+
+            // Toast Helper
+            const showToast = (msg, type = 'error') => {
+                setToast({ msg, type });
+                setTimeout(() => setToast(null), 4000);
+            };
+
+            const safePushState = (data, title, url) => {
+                try {
+                    window.history.pushState(data, title, url);
+                } catch (e) {
+                    console.warn("PushState failed:", e);
+                }
+            };
+
+            useEffect(() => {
+                const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
+                setMyBookings(history);
+                const params = new URLSearchParams(window.location.search);
+                const id = params.get('id');
+                auth.signInAnonymously().catch(err => console.error(err));
+                return auth.onAuthStateChanged(u => {
+                    setUser(u);
+                    if (id) { setBookingId(id); setView('BOOKING'); } else { setView('HOME'); }
+                });
+            }, []);
+
+            useEffect(() => {
+                if (!user || view !== 'BOOKING' || !bookingId) return;
+                const playersRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`);
+                const configRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(bookingId);
+                const unsubP = playersRef.onSnapshot(snap => setPlayers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                const unsubC = configRef.onSnapshot(doc => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (data.createdAt && (Date.now() - data.createdAt > (72*60*60*1000))) {
+                            // Check Logic
+                        }
+                        setConfig({ ...DEFAULT_CONFIG, ...data });
+                    } else { setConfig(DEFAULT_CONFIG); }
+                });
+                return () => { unsubP(); unsubC(); };
+            }, [user, view, bookingId]);
+
+            const goHome = () => { 
+                setView('HOME'); 
+                setBookingId(null); 
+                safePushState({}, '', window.location.pathname); 
+            };
+
+            const startCreateProcess = () => setShowCreateModal(true);
+            const confirmCreateBooking = async () => {
+                if (!user) return alert("Connecting...");
+                setShowCreateModal(false);
+                const newId = Math.random().toString(36).substring(2, 10);
+                const now = Date.now();
+                try {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(newId).set({
+                        ...DEFAULT_CONFIG, title: newBookingConfig.title, createdAt: now, createdBy: user.uid
+                    });
+                    const newHistory = [{ id: newId, title: newBookingConfig.title, date: new Date().toLocaleDateString(), timestamp: now }, ...myBookings];
+                    localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
+                    setMyBookings(newHistory);
+                    setBookingId(newId); 
+                    setView('BOOKING');
+                    const newUrl = `${window.location.pathname}?id=${newId}`;
+                    safePushState({path: newUrl}, '', newUrl);
+                } catch (e) { alert("Error: " + e.message); }
+            };
+            const deleteHistory = (idx) => {
+                if(!confirm("Remove from history?")) return;
+                const h = [...myBookings]; h.splice(idx, 1); setMyBookings(h);
+                localStorage.setItem('bookingHistory', JSON.stringify(h));
+            };
+            const clearAllHistory = () => {
+                if(!confirm("Clear history?")) return;
+                setMyBookings([]); localStorage.removeItem('bookingHistory');
+            };
+            
+            // --- Updated Admin Logic ---
+            const adminLogin = (e) => {
+                e.preventDefault();
+                const currentPass = config.adminPassword || config.adminPin; 
+                if (passwordInput === currentPass || passwordInput === MASTER_KEY) { 
+                    setIsAdmin(true); 
+                    setShowAdminAuth(false); 
+                    setPasswordInput(''); 
+                } else { 
+                    showToast("Incorrect Password", "error");
+                    
+                    // Shake animation handled by class in JSX if needed, but Toast is cleaner.
+                }
+            };
+
+            const updateSetting = (k, v) => db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(bookingId).update({ [k]: v });
+            
+            const changeAdminPassword = () => {
+                const hasUpperCase = /[A-Z]/.test(newPasswordInput);
+                const hasLowerCase = /[a-z]/.test(newPasswordInput);
+                const hasNumber = /[0-9]/.test(newPasswordInput);
+                const isLongEnough = newPasswordInput.length >= 4;
+
+                if (!isLongEnough || !hasUpperCase || !hasLowerCase || !hasNumber) {
+                    return showToast("Password must have: 1 Uppercase, 1 Lowercase, 1 Number, Min 4 chars.", "error");
+                }
+
+                updateSetting('adminPassword', newPasswordInput); 
+                setNewPasswordInput(''); 
+                showToast("Password Updated Successfully", "success");
+            };
+
+            const uploadImage = (file, field, docId = null) => {
+                if (!file || file.size > IMAGE_SIZE_LIMIT_KB * 1024) return alert("Image too large (>700KB)");
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const base64 = e.target.result;
+                    if (field === 'paymentInfoImage') updateSetting('paymentInfoImage', base64);
+                    else if (field === 'proof' && docId) await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(docId).update({ paymentProof: base64 });
+                    showToast("Image Uploaded!", "success");
+                };
+                reader.readAsDataURL(file);
+            };
+            const addPlayer = async (e) => {
+                e.preventDefault();
+                if (!newName.trim()) return;
+                if (!isAdmin && players.find(p => p.createdBy === user.uid)) return alert("Already registered!");
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).add({ name: newName.trim(), isPaid: false, createdAt: Date.now(), createdBy: user.uid, paymentProof: null });
+                setNewName('');
+            };
+            const togglePaid = (p) => {
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(p.id).update({ isPaid: !p.isPaid })
+                .catch(err => alert("Error updating payment: " + err.message));
+            };
+            
+            const deletePlayer = (id) => {
+                if (!isAdmin) {
+                    const deadlineStr = `${config.matchDate}T${config.withdrawalTime}`;
+                    const deadline = new Date(deadlineStr).getTime();
+                    if (!isNaN(deadline) && Date.now() > deadline) {
+                         alert(`Cannot withdraw. Deadline passed at ${config.withdrawalTime}`);
+                         return;
+                    }
+                }
+                if(confirm("Delete?")) {
+                    db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(id).delete()
+                    .catch(err => alert("Error deleting: " + err.message));
+                }
+            };
+            
+            const deleteBookingCompletely = async () => {
+                if (!confirm("WARNING: This will delete this booking and all players PERMANENTLY. Continue?")) return;
+                const playersSnap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).get();
+                const batch = db.batch();
+                playersSnap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(bookingId).delete();
+                const h = myBookings.filter(b => b.id !== bookingId);
+                localStorage.setItem('bookingHistory', JSON.stringify(h));
+                setMyBookings(h);
+                alert("Booking Deleted!"); goHome();
+            };
+            const copyLink = () => {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(() => {setShareMsg('Copied!'); setTimeout(()=>setShareMsg(''),2000)}).catch(() => setShowManualShare(true));
+            };
+            const generateTeams = () => {
+                const active = players.sort((a,b) => a.createdAt - b.createdAt).slice(0, config.maxPlayers);
+                if(active.length < 2) return alert("Not enough players!");
+                const shuffled = [...active].sort(() => 0.5 - Math.random());
+                const buckets = Array.from({length: teamCount}, () => []);
+                shuffled.forEach((p, i) => buckets[i % teamCount].push(p.name));
+                let msg = ""; buckets.forEach((bucket, i) => msg += `🏆 TEAM ${i+1} (${bucket.length}):\n${bucket.join('\n')}\n\n`);
+                alert(msg); setShowTeamGen(false);
+            };
+            
+            const resetPlayersList = () => { 
+                if(confirm('Clear all players?')) players.forEach(p=>db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(p.id).delete()); 
+            };
+
+            if (view === 'LOADING') return <div className="flex h-screen items-center justify-center text-white font-bold">Loading...</div>;
+
+            if (view === 'HOME') return (
+                <div className="min-h-screen bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 relative">
+                    <button onClick={() => isAdmin ? setIsAdmin(false) : setShowAdminAuth(!showAdminAuth)} className="absolute top-4 right-4 p-3 bg-white text-black rounded-full shadow-lg z-50 border-2 border-gray-300 hover:scale-105 transition">
+                        {isAdmin ? <Icons.Unlock size={24}/> : <Icons.Lock size={24}/>}
+                    </button>
+                    {!isAdmin && showAdminAuth && (
+                        <div className="absolute top-20 right-4 bg-white p-3 rounded-xl shadow-2xl z-50 flex flex-col gap-2 w-72 max-w-[90vw] border border-gray-200 animate-fade-in">
+                            <div className="flex gap-2">
+                                <input type="password" placeholder="Enter Admin Password" className="flex-1 p-2 border rounded text-black outline-none" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)}/>
+                                <button onClick={adminLogin} className="bg-indigo-900 text-white px-3 rounded font-bold">GO</button>
+                            </div>
+                            {toast && toast.type === 'error' && <div className="text-red-500 text-xs font-bold">{toast.msg}</div>}
+                        </div>
+                    )}
+                    {!showCreateModal ? (
+                        <div className="bg-white/95 w-full max-w-md p-6 rounded-2xl shadow-2xl text-center relative z-10">
+                            <h1 className="text-3xl font-bold text-indigo-900 mb-2">Stadium Manager</h1>
+                            <p className="text-gray-500 mb-6">Organize your matches easily</p>
+                            <button onClick={startCreateProcess} disabled={!user} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow hover:bg-indigo-700 transition flex items-center justify-center gap-2 mb-6">
+                                <Icons.UserPlus size={20}/> {user ? "Create New Booking" : "Connecting..."}
+                            </button>
+                            {myBookings.length > 0 && (
+                                <div className="text-left">
+                                    <div className="text-xs font-bold text-gray-400 mb-2 flex justify-between items-center"><span>PREVIOUS BOOKINGS</span><button onClick={clearAllHistory} className="text-red-500 hover:underline">Clear All</button></div>
+                                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                                        {myBookings.map((b, i) => (
+                                            <div key={i} className="flex items-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200 hover:bg-white transition">
+                                                <button onClick={() => { setBookingId(b.id); setView('BOOKING'); const url=`?id=${b.id}`; safePushState({path:url},'',url); }} className="flex-1 text-left">
+                                                    <div className="font-bold text-indigo-900 text-sm">{b.title || 'Friendly Match'}</div>
+                                                    <span className="font-mono text-gray-400 text-xs">#{b.id}</span><span className="text-xs text-gray-500 ml-2">{b.date}</span>
+                                                </button>
+                                                <button onClick={() => deleteHistory(i)} className="text-white bg-black p-2 rounded-lg shadow hover:bg-gray-800 transition"><Icons.Trash2 size={18}/></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="bg-white/95 w-full max-w-md p-6 rounded-2xl shadow-2xl relative z-10">
+                            <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2"><Icons.Settings size={20}/> New Match</h2>
+                            <div className="mb-6"><label className="block text-xs font-bold text-gray-500 mb-1">Match Title</label><input type="text" className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500" value={newBookingConfig.title} onChange={e => setNewBookingConfig({...newBookingConfig, title: e.target.value})} placeholder="e.g. Thursday Night Game"/></div>
+                            <div className="flex gap-3"><button onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200">Cancel</button><button onClick={confirmCreateBooking} className="flex-1 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700">Start Booking</button></div>
+                        </div>
+                    )}
+                </div>
+            );
+
+            const sorted = players.sort((a,b) => a.createdAt - b.createdAt);
+            const activeList = sorted.slice(0, config.maxPlayers);
+            const waitList = sorted.slice(config.maxPlayers);
+            const cost = config.maxPlayers > 0 ? (config.totalCost / config.maxPlayers).toFixed(2) : 0;
+            const myEntry = user && players.find(p => p.createdBy === user.uid);
+            
+            const deadlineStr = `${config.matchDate}T${config.withdrawalTime}`;
+            const deadline = new Date(deadlineStr).getTime();
+            const isDeadlinePassed = !isNaN(deadline) && Date.now() > deadline;
+
+            return (
+                <div className="min-h-screen pb-20 bg-black/50 backdrop-blur-sm content-padding">
+                    {/* Toast Notification */}
+                    {toast && (
+                        <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-[60] px-6 py-3 rounded-lg shadow-2xl border flex items-center gap-2 animate-fade-in ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>
+                            {toast.type === 'error' ? <Icons.X size={20}/> : <Icons.Check size={20}/>}
+                            <span className="font-bold text-sm">{toast.msg}</span>
+                        </div>
+                    )}
+
+                    <div className="sticky-header bg-indigo-900/95 text-white p-4 shadow-lg backdrop-blur-md border-b border-indigo-800">
+                        <div className="max-w-md mx-auto flex justify-between items-center">
+                            <div className="flex-1 min-w-0 pr-2"><h1 className="font-bold text-lg truncate">{config.title}</h1><div className="text-xs opacity-75 flex gap-2 items-center">
+                                <Icons.Calendar size={12}/> {config.matchDate} <span className="mx-1">|</span> <Icons.Clock size={12}/> {config.startTime} - {config.endTime}
+                            </div></div>
+                            <div className="flex gap-3 items-center flex-shrink-0">
+                                <button onClick={goHome} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition"><Icons.Home size={20}/></button>
+                                <button onClick={copyLink} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition relative"><Icons.Share size={20}/>{shareMsg && <span className="absolute -bottom-8 right-0 bg-black text-xs px-2 py-1 rounded">{shareMsg}</span>}</button>
+                                <button onClick={() => isAdmin ? setIsAdmin(false) : setShowAdminAuth(!showAdminAuth)} className={`p-2 rounded-full border-2 shadow-md transition ${isAdmin?'bg-yellow-400 text-black border-yellow-500':'bg-white text-black border-gray-300 hover:scale-105'}`}>
+                                    {isAdmin ? <Icons.Unlock size={20}/> : <Icons.Lock size={20}/>}
+                                </button>
+                            </div>
+                        </div>
+                        {!isAdmin && showAdminAuth && (
+                            <div className="max-w-md mx-auto mt-3 flex gap-2 admin-panel bg-white p-2 rounded-lg shadow-xl animate-fade-in">
+                                <input type="password" placeholder="Enter Admin Password" className="flex-1 p-2 rounded text-black border border-gray-300 outline-none" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)}/>
+                                <button onClick={adminLogin} className="bg-indigo-900 text-white px-4 rounded font-bold hover:bg-indigo-800">Login</button>
+                            </div>
+                        )}
+                        {showManualShare && (
+                             <div className="max-w-md mx-auto mt-3 bg-white p-2 rounded text-black flex gap-2"><input readOnly value={window.location.href} className="flex-1 text-xs border p-1"/><button onClick={()=>setShowManualShare(false)}><Icons.X size={16}/></button></div>
+                        )}
+                    </div>
+                    <div className="max-w-md mx-auto p-4 space-y-4 mt-4">
+                        <div className="bg-white/95 rounded-xl p-4 shadow-xl text-center flex justify-between divide-x mt-6">
+                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">TOTAL</div><div className="font-bold text-indigo-900 text-lg">{config.currency} {config.totalCost}</div></div>
+                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">PER PERSON</div><div className="font-bold text-emerald-600 text-lg">{config.currency} {cost}</div></div>
+                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">SLOTS</div><div className={`font-bold text-lg ${activeList.length>=config.maxPlayers?'text-red-500':'text-indigo-900'}`}>{activeList.length}/{config.maxPlayers}</div></div>
+                        </div>
+                        {isDeadlinePassed && <div className="bg-red-50 text-red-600 p-2 rounded text-center text-xs font-bold border border-red-200 flex items-center justify-center gap-2"><Icons.TimerOff size={14}/> Withdrawal deadline passed ({config.withdrawalTime})</div>}
+                        {config.paymentInfoImage && <div className="flex gap-2"><button onClick={()=>setViewImage(config.paymentInfoImage)} className="w-full bg-white/90 py-3 rounded-lg font-bold text-indigo-700 text-sm shadow flex justify-center gap-2 hover:bg-white transition"><Icons.CreditCard size={18}/> Show Payment Info</button></div>}
+                        {isAdmin && (
+                            <div className="bg-white/95 p-4 rounded-xl shadow-xl admin-panel space-y-4 border-2 border-yellow-400">
+                                <div className="font-bold text-gray-800 border-b pb-2 flex justify-between items-center"><span>⚙️ Admin Control</span><button onClick={()=>setIsAdmin(false)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200 flex gap-1 items-center"><Icons.LogOut size={12}/> Exit Admin</button></div>
+                                <input type="text" value={config.title} onChange={e=>updateSetting('title', e.target.value)} className="w-full border p-2 rounded" placeholder="Event Title"/>
+                                <div className="grid grid-cols-2 gap-2"><input type="time" value={config.startTime} onChange={e=>updateSetting('startTime', e.target.value)} className="border p-2 rounded"/><input type="time" value={config.endTime} onChange={e=>updateSetting('endTime', e.target.value)} className="border p-2 rounded"/><input type="number" value={config.totalCost} onChange={e=>updateSetting('totalCost', Number(e.target.value))} className="border p-2 rounded" placeholder="Cost"/><input type="number" value={config.maxPlayers} onChange={e=>updateSetting('maxPlayers', Number(e.target.value))} className="border p-2 rounded" placeholder="Max"/></div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div><label className="text-xs text-gray-500">Date</label><input type="date" value={config.matchDate} onChange={e=>updateSetting('matchDate', e.target.value)} className="w-full border p-2 rounded"/></div>
+                                    <div><label className="text-xs text-red-500 font-bold">Lock Withdrawal</label><input type="time" value={config.withdrawalTime} onChange={e=>updateSetting('withdrawalTime', e.target.value)} className="w-full border p-2 rounded border-red-200"/></div>
+                                </div>
+                                <div className="flex items-center gap-2 bg-gray-100 p-2 rounded"><div className="text-xs font-bold text-gray-500">QR Image:</div><input type="file" onChange={e=>uploadImage(e.target.files[0], 'paymentInfoImage')} className="text-xs"/></div>
+                                <div className="bg-gray-100 p-2 rounded mt-2"><div className="text-xs font-bold text-gray-500 mb-1">Security (Password)</div><div className="flex gap-2"><input type="text" value={newPasswordInput} onChange={e=>setNewPasswordInput(e.target.value)} className="flex-1 border p-1 rounded text-xs" placeholder="New Password"/><button onClick={changeAdminPassword} className="bg-slate-800 text-white px-3 py-1 rounded text-xs font-bold">Update</button></div></div>
+                                <div className="flex flex-col gap-2 pt-2">
+                                    <div className="flex gap-2">
+                                        <button onClick={()=>setShowTeamGen(true)} className="flex-1 bg-blue-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-blue-600">Make Teams</button>
+                                        <button onClick={resetPlayersList} className="flex-1 bg-orange-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-orange-600">Reset Players</button>
+                                    </div>
+                                    <button onClick={deleteBookingCompletely} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">DELETE BOOKING PERMANENTLY</button>
+                                </div>
+                            </div>
+                        )}
+                        {myEntry && !isAdmin ? (
+                            <div className="bg-emerald-100/95 p-4 rounded-xl border-2 border-emerald-400 text-center shadow-lg animate-fade-in">
+                                <div className="text-emerald-800 font-bold text-lg">✅ You are registered!</div><div className="text-emerald-600 font-bold text-xl my-1">{myEntry.name}</div>
+                                <div className="mt-3 pt-3 border-t border-emerald-200 flex gap-2 justify-center"><label className="bg-white text-emerald-700 px-4 py-2 rounded-lg cursor-pointer font-bold text-xs hover:bg-emerald-50 shadow flex items-center gap-2"><Icons.Upload size={14}/> {myEntry.paymentProof ? 'Change' : 'Upload'} Receipt<input type="file" className="hidden" onChange={e=>uploadImage(e.target.files[0], 'proof', myEntry.id)} /></label>{myEntry.paymentProof && <button onClick={()=>setViewImage(myEntry.paymentProof)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-emerald-700 shadow flex items-center gap-2"><Icons.Eye size={14}/> View</button>}</div>
+                            </div>
+                        ) : (
+                            (!isAdmin && activeList.length >= config.maxPlayers) ? (
+                                <form onSubmit={addPlayer} className="bg-orange-100/95 p-4 rounded-xl border-2 border-orange-300 shadow-lg"><div className="text-orange-800 font-bold mb-2 flex items-center gap-2">⚠️ List Full! Join Waitlist:</div><div className="flex gap-2"><input className="flex-1 p-3 rounded-lg border border-orange-200 outline-none" placeholder="Your Name..." value={newName} onChange={e=>setNewName(e.target.value)}/><button className="bg-orange-500 text-white px-6 rounded-lg font-bold hover:bg-orange-600 shadow">Join</button></div></form>
+                            ) : (
+                                <form onSubmit={addPlayer} className="bg-white/95 p-4 rounded-xl shadow-lg flex gap-2 border-2 border-indigo-100"><input className="flex-1 p-3 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-200 text-lg" placeholder={isAdmin ? "Add Player Manually..." : "Enter Your Name..."} value={newName} onChange={e=>setNewName(e.target.value)}/><button className="bg-indigo-600 text-white px-6 rounded-lg font-bold hover:bg-indigo-700 shadow text-lg">JOIN</button></form>
+                            )
+                        )}
+                        <div className="space-y-2">
+                            {activeList.map((p, i) => (
+                                <div key={p.id} className="bg-white/90 backdrop-blur-sm p-3 rounded-xl flex items-center justify-between shadow-sm border border-white/20">
+                                    <div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${p.isPaid?'bg-emerald-100 text-emerald-700':'bg-gray-200 text-gray-500'}`}>{i+1}</div><div><div className="font-bold text-gray-800 text-lg">{p.name}</div><div className="flex gap-2 text-xs items-center mt-1">{isAdmin ? <button onClick={()=>togglePaid(p)} className={`px-2 py-0.5 rounded font-bold ${p.isPaid?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}`}>{p.isPaid?'PAID':'UNPAID'}</button> : <span className={`font-bold ${p.isPaid?'text-emerald-600':'text-red-400'}`}>{p.isPaid?'PAID':'UNPAID'}</span>}{(p.paymentProof && (isAdmin || (user && user.uid === p.createdBy))) && <button onClick={()=>setViewImage(p.paymentProof)} className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1 font-bold hover:bg-blue-100"><Icons.Image size={12}/> Receipt</button>}</div></div></div>{(isAdmin || (user && user.uid === p.createdBy && !isDeadlinePassed)) && <button onClick={()=>deletePlayer(p.id)} className="text-gray-400 hover:text-red-500 p-2"><Icons.Trash2 size={20}/></button>}
+                                </div>
+                            ))}
+                        </div>
+                        {waitList.length > 0 && (
+                            <div className="mt-6"><div className="text-white font-bold text-sm mb-2 opacity-90 uppercase tracking-wider">Waitlist</div>{waitList.map((p, i) => (<div key={p.id} className="bg-orange-50/90 p-3 rounded-xl flex justify-between items-center mb-2 border border-orange-200 shadow-sm"><div className="flex items-center gap-3"><span className="font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded text-xs">W-{i+1}</span><span className="font-bold text-slate-700">{p.name}</span></div>{(isAdmin || (user && user.uid === p.createdBy && !isDeadlinePassed)) && <button onClick={()=>deletePlayer(p.id)} className="text-orange-400 hover:text-red-500"><Icons.Trash2 size={18}/></button>}</div>))}</div>
+                        )}
+                    </div>
+                    {viewImage && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" onClick={()=>setViewImage(null)}><img src={viewImage} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl border-4 border-white"/></div>}
+                    {showTeamGen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={()=>setShowTeamGen(false)}><div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" onClick={e=>e.stopPropagation()}><div className="bg-indigo-600 p-4 text-white font-bold flex justify-between items-center"><span className="flex items-center gap-2"><Icons.Activity size={20}/> Team Generator</span><button onClick={()=>setShowTeamGen(false)}><Icons.X size={24}/></button></div><div className="p-6 text-center"><div className="flex items-center justify-center gap-6 mb-8"><button className="bg-gray-200 w-12 h-12 rounded-full font-bold text-2xl hover:bg-gray-300 flex items-center justify-center shadow" onClick={()=>setTeamCount(Math.max(2, teamCount-1))}>-</button><div className="text-center"><span className="block font-bold text-3xl text-indigo-900">{teamCount}</span><span className="text-xs text-gray-500 uppercase font-bold">Teams</span></div><button className="bg-gray-200 w-12 h-12 rounded-full font-bold text-2xl hover:bg-gray-300 flex items-center justify-center shadow" onClick={()=>setTeamCount(teamCount+1)}>+</button></div><button onClick={generateTeams} className="bg-indigo-600 text-white px-6 py-4 rounded-xl font-bold w-full shadow-lg hover:bg-indigo-700 text-lg">SHUFFLE & SHOW</button></div></div></div>}
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
