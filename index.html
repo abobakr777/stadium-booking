@@ -43,14 +43,6 @@
         
         .admin-panel { animation: slideDown 0.3s ease-out; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
     </style>
 </head>
 <body>
@@ -96,6 +88,7 @@
             Image: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
             Upload: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
             Eye: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+            EyeOff: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
             CreditCard: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
             Plus: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
             Calendar: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
@@ -104,7 +97,9 @@
             Home: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
             LogOut: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
             Key: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
-            TimerOff: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 13a9 9 0 1 0 9-9M12 7v5l3 3"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            TimerOff: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 13a9 9 0 1 0 9-9M12 7v5l3 3"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
+            Search: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+            MapPin: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
         };
 
         const MASTER_KEY = "Football@b7"; 
@@ -122,15 +117,16 @@
 
         const DEFAULT_CONFIG = { 
             title: 'Stadium Booking', 
-            maxPlayers: 12, 
+            maxPlayers: 15, 
             matchDate: getTodayDate(),
             startTime: '20:00', 
             endTime: '21:00', 
             totalCost: 100, 
-            adminPassword: 'Admin1234', 
+            adminPassword: '', // Removed Default
             currency: 'RM', 
             paymentInfoImage: null,
-            withdrawalTime: '18:00'
+            withdrawalTime: '18:00',
+            location: ''
         };
 
         const { useState, useEffect, useRef } = React;
@@ -150,6 +146,7 @@
             const [isAdmin, setIsAdmin] = useState(false);
             const [showAdminAuth, setShowAdminAuth] = useState(false);
             const [passwordInput, setPasswordInput] = useState('');
+            const [showPassword, setShowPassword] = useState(false);
             const [newPasswordInput, setNewPasswordInput] = useState('');
             const [newName, setNewName] = useState('');
             const [toast, setToast] = useState(null);
@@ -161,13 +158,14 @@
             const [showCreateModal, setShowCreateModal] = useState(false);
             
             // Create Modal State
-            const [newBookingConfig, setNewBookingConfig] = useState({ title: 'Friendly Match' });
+            const [newBookingConfig, setNewBookingConfig] = useState({ title: 'Friendly Match', customId: '', password: '' });
             const [shareMsg, setShareMsg] = useState('');
             const [showManualShare, setShowManualShare] = useState(false);
+            const [joinCodeInput, setJoinCodeInput] = useState('');
+            const [createPassShow, setCreatePassShow] = useState(false); 
 
             const fileInputRef = useRef(null);
 
-            // Toast Helper
             const showToast = (msg, type = 'error') => {
                 setToast({ msg, type });
                 setTimeout(() => setToast(null), 4000);
@@ -179,6 +177,15 @@
                 } catch (e) {
                     console.warn("PushState failed:", e);
                 }
+            };
+
+            // Password Validation Logic
+            const isStrongPassword = (password) => {
+                const hasUpperCase = /[A-Z]/.test(password);
+                const hasLowerCase = /[a-z]/.test(password);
+                const hasNumber = /[0-9]/.test(password);
+                const isLongEnough = password.length >= 8;
+                return isLongEnough && hasUpperCase && hasLowerCase && hasNumber;
             };
 
             useEffect(() => {
@@ -201,9 +208,6 @@
                 const unsubC = configRef.onSnapshot(doc => {
                     if (doc.exists) {
                         const data = doc.data();
-                        if (data.createdAt && (Date.now() - data.createdAt > (72*60*60*1000))) {
-                            // Check Logic
-                        }
                         setConfig({ ...DEFAULT_CONFIG, ...data });
                     } else { setConfig(DEFAULT_CONFIG); }
                 });
@@ -216,16 +220,54 @@
                 safePushState({}, '', window.location.pathname); 
             };
 
-            const startCreateProcess = () => setShowCreateModal(true);
+            const joinMatch = () => {
+                if (!joinCodeInput.trim()) return showToast("Please enter a match code", "error");
+                const code = joinCodeInput.trim();
+                setBookingId(code);
+                setView('BOOKING');
+                const newUrl = `${window.location.pathname}?id=${code}`;
+                safePushState({path: newUrl}, '', newUrl);
+            };
+
+            const startCreateProcess = () => {
+                setNewBookingConfig({ title: 'Friendly Match', customId: '', password: '' }); 
+                setShowCreateModal(true);
+            };
+            
             const confirmCreateBooking = async () => {
-                if (!user) return alert("Connecting...");
+                if (!user) return showToast("Connecting...", "error");
+                
+                if (!isStrongPassword(newBookingConfig.password)) {
+                     showToast("Password must have: Min 8 chars, 1 Uppercase, 1 Lowercase, 1 Number.", "error");
+                     return;
+                }
+
+                let newId = newBookingConfig.customId.trim();
+                if (!newId) {
+                     newId = Math.random().toString(36).substring(2, 10);
+                } else {
+                    newId = newId.replace(/[^a-zA-Z0-9-_]/g, '');
+                    if (!newId) return showToast("Invalid characters in Match Code", "error");
+                }
+
+                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(newId);
+                const docSnap = await docRef.get();
+                if (docSnap.exists) {
+                    return showToast("Match Code already taken!", "error");
+                }
+
                 setShowCreateModal(false);
-                const newId = Math.random().toString(36).substring(2, 10);
+                
                 const now = Date.now();
                 try {
-                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(newId).set({
-                        ...DEFAULT_CONFIG, title: newBookingConfig.title, createdAt: now, createdBy: user.uid
+                    await docRef.set({
+                        ...DEFAULT_CONFIG,
+                        title: newBookingConfig.title,
+                        adminPassword: newBookingConfig.password, 
+                        createdAt: now, 
+                        createdBy: user.uid
                     });
+                    
                     const newHistory = [{ id: newId, title: newBookingConfig.title, date: new Date().toLocaleDateString(), timestamp: now }, ...myBookings];
                     localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
                     setMyBookings(newHistory);
@@ -233,8 +275,9 @@
                     setView('BOOKING');
                     const newUrl = `${window.location.pathname}?id=${newId}`;
                     safePushState({path: newUrl}, '', newUrl);
-                } catch (e) { alert("Error: " + e.message); }
+                } catch (e) { showToast("Error: " + e.message, "error"); }
             };
+            
             const deleteHistory = (idx) => {
                 if(!confirm("Remove from history?")) return;
                 const h = [...myBookings]; h.splice(idx, 1); setMyBookings(h);
@@ -245,31 +288,23 @@
                 setMyBookings([]); localStorage.removeItem('bookingHistory');
             };
             
-            // --- Updated Admin Logic ---
             const adminLogin = (e) => {
                 e.preventDefault();
-                const currentPass = config.adminPassword || config.adminPin; 
+                const currentPass = config.adminPassword;
                 if (passwordInput === currentPass || passwordInput === MASTER_KEY) { 
                     setIsAdmin(true); 
                     setShowAdminAuth(false); 
                     setPasswordInput(''); 
                 } else { 
                     showToast("Incorrect Password", "error");
-                    
-                    // Shake animation handled by class in JSX if needed, but Toast is cleaner.
                 }
             };
 
             const updateSetting = (k, v) => db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(bookingId).update({ [k]: v });
             
             const changeAdminPassword = () => {
-                const hasUpperCase = /[A-Z]/.test(newPasswordInput);
-                const hasLowerCase = /[a-z]/.test(newPasswordInput);
-                const hasNumber = /[0-9]/.test(newPasswordInput);
-                const isLongEnough = newPasswordInput.length >= 4;
-
-                if (!isLongEnough || !hasUpperCase || !hasLowerCase || !hasNumber) {
-                    return showToast("Password must have: 1 Uppercase, 1 Lowercase, 1 Number, Min 4 chars.", "error");
+                if (!isStrongPassword(newPasswordInput)) {
+                    return showToast("Password must have: Min 8 chars, 1 Uppercase, 1 Lowercase, 1 Number.", "error");
                 }
 
                 updateSetting('adminPassword', newPasswordInput); 
@@ -278,7 +313,7 @@
             };
 
             const uploadImage = (file, field, docId = null) => {
-                if (!file || file.size > IMAGE_SIZE_LIMIT_KB * 1024) return alert("Image too large (>700KB)");
+                if (!file || file.size > IMAGE_SIZE_LIMIT_KB * 1024) return showToast("Image too large (>700KB)", "error");
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const base64 = e.target.result;
@@ -291,13 +326,13 @@
             const addPlayer = async (e) => {
                 e.preventDefault();
                 if (!newName.trim()) return;
-                if (!isAdmin && players.find(p => p.createdBy === user.uid)) return alert("Already registered!");
+                if (!isAdmin && players.find(p => p.createdBy === user.uid)) return showToast("Already registered!", "error");
                 await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).add({ name: newName.trim(), isPaid: false, createdAt: Date.now(), createdBy: user.uid, paymentProof: null });
                 setNewName('');
             };
             const togglePaid = (p) => {
                 db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(p.id).update({ isPaid: !p.isPaid })
-                .catch(err => alert("Error updating payment: " + err.message));
+                .catch(err => showToast("Error updating: " + err.message, "error"));
             };
             
             const deletePlayer = (id) => {
@@ -305,13 +340,12 @@
                     const deadlineStr = `${config.matchDate}T${config.withdrawalTime}`;
                     const deadline = new Date(deadlineStr).getTime();
                     if (!isNaN(deadline) && Date.now() > deadline) {
-                         alert(`Cannot withdraw. Deadline passed at ${config.withdrawalTime}`);
-                         return;
+                         return showToast(`Cannot withdraw. Deadline passed at ${config.withdrawalTime}`, "error");
                     }
                 }
                 if(confirm("Delete?")) {
                     db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(id).delete()
-                    .catch(err => alert("Error deleting: " + err.message));
+                    .catch(err => showToast("Error deleting: " + err.message, "error"));
                 }
             };
             
@@ -325,15 +359,19 @@
                 const h = myBookings.filter(b => b.id !== bookingId);
                 localStorage.setItem('bookingHistory', JSON.stringify(h));
                 setMyBookings(h);
-                alert("Booking Deleted!"); goHome();
+                showToast("Booking Deleted!", "success"); 
+                goHome();
+            };
+            const copyCode = () => {
+                navigator.clipboard.writeText(bookingId).then(() => showToast("Match Code Copied!", "success")).catch(() => prompt("Copy Code:", bookingId));
             };
             const copyLink = () => {
                 const url = window.location.href;
-                navigator.clipboard.writeText(url).then(() => {setShareMsg('Copied!'); setTimeout(()=>setShareMsg(''),2000)}).catch(() => setShowManualShare(true));
+                navigator.clipboard.writeText(url).then(() => {showToast('Copied!', 'success')}).catch(() => setShowManualShare(true));
             };
             const generateTeams = () => {
                 const active = players.sort((a,b) => a.createdAt - b.createdAt).slice(0, config.maxPlayers);
-                if(active.length < 2) return alert("Not enough players!");
+                if(active.length < 2) return showToast("Not enough players!", "error");
                 const shuffled = [...active].sort(() => 0.5 - Math.random());
                 const buckets = Array.from({length: teamCount}, () => []);
                 shuffled.forEach((p, i) => buckets[i % teamCount].push(p.name));
@@ -352,33 +390,71 @@
                     <button onClick={() => isAdmin ? setIsAdmin(false) : setShowAdminAuth(!showAdminAuth)} className="absolute top-4 right-4 p-3 bg-white text-black rounded-full shadow-lg z-50 border-2 border-gray-300 hover:scale-105 transition">
                         {isAdmin ? <Icons.Unlock size={24}/> : <Icons.Lock size={24}/>}
                     </button>
+                    
                     {!isAdmin && showAdminAuth && (
                         <div className="absolute top-20 right-4 bg-white p-3 rounded-xl shadow-2xl z-50 flex flex-col gap-2 w-72 max-w-[90vw] border border-gray-200 animate-fade-in">
-                            <div className="flex gap-2">
-                                <input type="password" placeholder="Enter Admin Password" className="flex-1 p-2 border rounded text-black outline-none" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)}/>
-                                <button onClick={adminLogin} className="bg-indigo-900 text-white px-3 rounded font-bold">GO</button>
+                            <div className="relative flex items-center">
+                                <input 
+                                    type={showPassword ? "text" : "password"} 
+                                    placeholder="Enter Admin Password" 
+                                    className="flex-1 p-2 border rounded text-black outline-none pr-10" 
+                                    value={passwordInput} 
+                                    onChange={e=>setPasswordInput(e.target.value)}
+                                />
+                                <button 
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-2 text-gray-500 hover:text-gray-700"
+                                >
+                                    {showPassword ? <Icons.EyeOff size={18}/> : <Icons.Eye size={18}/>}
+                                </button>
                             </div>
+                            <button onClick={adminLogin} className="bg-indigo-900 text-white px-3 rounded font-bold py-2">Login</button>
                             {toast && toast.type === 'error' && <div className="text-red-500 text-xs font-bold">{toast.msg}</div>}
                         </div>
                     )}
+
                     {!showCreateModal ? (
                         <div className="bg-white/95 w-full max-w-md p-6 rounded-2xl shadow-2xl text-center relative z-10">
-                            <h1 className="text-3xl font-bold text-indigo-900 mb-2">Stadium Manager</h1>
-                            <p className="text-gray-500 mb-6">Organize your matches easily</p>
-                            <button onClick={startCreateProcess} disabled={!user} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow hover:bg-indigo-700 transition flex items-center justify-center gap-2 mb-6">
-                                <Icons.UserPlus size={20}/> {user ? "Create New Booking" : "Connecting..."}
-                            </button>
+                            <h1 className="text-3xl font-bold text-indigo-900 mb-6 flex items-center justify-center gap-2">
+                                 Stadium Manager
+                            </h1>
+
+                            <div className="grid gap-4">
+                                <button onClick={startCreateProcess} disabled={!user} className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:from-indigo-700 hover:to-blue-700 transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                                    <div className="bg-white/20 p-2 rounded-full"><Icons.UserPlus size={24}/></div>
+                                    <div className="text-left">
+                                        <div className="text-lg leading-none">Create Match</div>
+                                        <div className="text-xs font-normal opacity-80">I am the Admin</div>
+                                    </div>
+                                </button>
+
+                                <div className="bg-gray-5 p-4 rounded-xl border border-gray-200">
+                                    <div className="text-left font-bold text-gray-700 mb-2 flex items-center gap-2"><Icons.Search size={18}/> Join a Match</div>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-black uppercase tracking-wider font-mono" 
+                                            placeholder="Enter Code"
+                                            value={joinCodeInput}
+                                            onChange={e => setJoinCodeInput(e.target.value)}
+                                        />
+                                        <button onClick={joinMatch} className="bg-gray-800 text-white px-6 rounded-lg font-bold hover:bg-black">JOIN</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             {myBookings.length > 0 && (
-                                <div className="text-left">
-                                    <div className="text-xs font-bold text-gray-400 mb-2 flex justify-between items-center"><span>PREVIOUS BOOKINGS</span><button onClick={clearAllHistory} className="text-red-500 hover:underline">Clear All</button></div>
-                                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                                <div className="text-left mt-8">
+                                    <div className="text-xs font-bold text-gray-400 mb-2 flex justify-between items-center"><span>HISTORY</span><button onClick={clearAllHistory} className="text-red-500 hover:underline">Clear</button></div>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto">
                                         {myBookings.map((b, i) => (
                                             <div key={i} className="flex items-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200 hover:bg-white transition">
                                                 <button onClick={() => { setBookingId(b.id); setView('BOOKING'); const url=`?id=${b.id}`; safePushState({path:url},'',url); }} className="flex-1 text-left">
-                                                    <div className="font-bold text-indigo-900 text-sm">{b.title || 'Friendly Match'}</div>
-                                                    <span className="font-mono text-gray-400 text-xs">#{b.id}</span><span className="text-xs text-gray-500 ml-2">{b.date}</span>
+                                                    <div className="font-bold text-indigo-900 text-sm truncate">{b.title || 'Match'}</div>
+                                                    <span className="font-mono text-gray-400 text-xs">#{b.id}</span>
+                                                    <span className="text-xs text-gray-500 ml-2">{b.date}</span>
                                                 </button>
-                                                <button onClick={() => deleteHistory(i)} className="text-white bg-black p-2 rounded-lg shadow hover:bg-gray-800 transition"><Icons.Trash2 size={18}/></button>
+                                                <button onClick={() => deleteHistory(i)} className="text-gray-400 hover:text-red-600 p-2"><Icons.Trash2 size={16}/></button>
                                             </div>
                                         ))}
                                     </div>
@@ -387,39 +463,83 @@
                         </div>
                     ) : (
                         <div className="bg-white/95 w-full max-w-md p-6 rounded-2xl shadow-2xl relative z-10">
-                            <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2"><Icons.Settings size={20}/> New Match</h2>
-                            <div className="mb-6"><label className="block text-xs font-bold text-gray-500 mb-1">Match Title</label><input type="text" className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500" value={newBookingConfig.title} onChange={e => setNewBookingConfig({...newBookingConfig, title: e.target.value})} placeholder="e.g. Thursday Night Game"/></div>
-                            <div className="flex gap-3"><button onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200">Cancel</button><button onClick={confirmCreateBooking} className="flex-1 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700">Start Booking</button></div>
+                            <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2"><Icons.Settings size={20}/> Match Details</h2>
+                            
+                            <div className="mb-4">
+                                <label className="block text-xs font-bold text-gray-500 mb-1">Match Title</label>
+                                <input type="text" className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500" value={newBookingConfig.title} onChange={e => setNewBookingConfig({...newBookingConfig, title: e.target.value})} placeholder="e.g. Thursday Game"/>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="block text-xs font-bold text-gray-500 mb-1">Match Code / ID (Optional)</label>
+                                <div className="flex gap-2 items-center">
+                                    <div className="bg-gray-100 p-2 rounded text-gray-500 font-mono text-sm">#</div>
+                                    <input 
+                                        type="text" 
+                                        className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500 font-mono uppercase" 
+                                        value={newBookingConfig.customId} 
+                                        onChange={e => setNewBookingConfig({...newBookingConfig, customId: e.target.value})} 
+                                        placeholder="AUTO-GENERATED"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-xs font-bold text-gray-500 mb-1">Set Admin Password</label>
+                                <div className="relative flex items-center">
+                                    <input 
+                                        type={createPassShow ? "text" : "password"} 
+                                        className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500 pr-10" 
+                                        value={newBookingConfig.password} 
+                                        onChange={e => setNewBookingConfig({...newBookingConfig, password: e.target.value})} 
+                                        placeholder="Min 8 chars, 1 Up, 1 Low, 1 Num"
+                                    />
+                                    <button 
+                                        onClick={() => setCreatePassShow(!createPassShow)}
+                                        className="absolute right-2 text-gray-500 hover:text-gray-700"
+                                    >
+                                        {createPassShow ? <Icons.EyeOff size={18}/> : <Icons.Eye size={18}/>}
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-1">You will need this password to manage this booking.</p>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                                <button onClick={confirmCreateBooking} className="flex-1 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700">Create</button>
+                            </div>
                         </div>
                     )}
+                    {toast && <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-lg shadow-2xl border flex items-center gap-2 animate-fade-in ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>{toast.type === 'error' ? <Icons.X size={20}/> : <Icons.Check size={20}/>}<span className="font-bold text-sm">{toast.msg}</span></div>}
                 </div>
             );
 
-            const sorted = players.sort((a,b) => a.createdAt - b.createdAt);
+            // ... (Rest of Booking View Render - Same as before) ...
+             const sorted = players.sort((a,b) => a.createdAt - b.createdAt);
             const activeList = sorted.slice(0, config.maxPlayers);
             const waitList = sorted.slice(config.maxPlayers);
             const cost = config.maxPlayers > 0 ? (config.totalCost / config.maxPlayers).toFixed(2) : 0;
             const myEntry = user && players.find(p => p.createdBy === user.uid);
-            
             const deadlineStr = `${config.matchDate}T${config.withdrawalTime}`;
             const deadline = new Date(deadlineStr).getTime();
             const isDeadlinePassed = !isNaN(deadline) && Date.now() > deadline;
 
             return (
                 <div className="min-h-screen pb-20 bg-black/50 backdrop-blur-sm content-padding">
-                    {/* Toast Notification */}
-                    {toast && (
-                        <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-[60] px-6 py-3 rounded-lg shadow-2xl border flex items-center gap-2 animate-fade-in ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>
-                            {toast.type === 'error' ? <Icons.X size={20}/> : <Icons.Check size={20}/>}
-                            <span className="font-bold text-sm">{toast.msg}</span>
-                        </div>
-                    )}
+                    {toast && <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[70] px-6 py-3 rounded-lg shadow-2xl border flex items-center gap-2 animate-fade-in ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>{toast.type === 'error' ? <Icons.X size={20}/> : <Icons.Check size={20}/>}<span className="font-bold text-sm">{toast.msg}</span></div>}
 
                     <div className="sticky-header bg-indigo-900/95 text-white p-4 shadow-lg backdrop-blur-md border-b border-indigo-800">
                         <div className="max-w-md mx-auto flex justify-between items-center">
-                            <div className="flex-1 min-w-0 pr-2"><h1 className="font-bold text-lg truncate">{config.title}</h1><div className="text-xs opacity-75 flex gap-2 items-center">
-                                <Icons.Calendar size={12}/> {config.matchDate} <span className="mx-1">|</span> <Icons.Clock size={12}/> {config.startTime} - {config.endTime}
-                            </div></div>
+                            <div className="flex-1 min-w-0 pr-2">
+                                <h1 className="font-bold text-lg truncate">{config.title}</h1>
+                                <div className="text-xs opacity-75 flex gap-2 items-center"><Icons.Calendar size={12}/> {config.matchDate} <span className="mx-1">|</span> <Icons.Clock size={12}/> {config.startTime} - {config.endTime}</div>
+                                {/* Match Code Display */}
+                                <div className="flex items-center gap-2 mt-1 bg-black/20 w-fit px-2 py-0.5 rounded cursor-pointer hover:bg-black/40 transition" onClick={copyCode}>
+                                    <span className="text-[10px] font-mono text-indigo-200">CODE:</span>
+                                    <span className="text-xs font-bold font-mono text-white">{bookingId}</span>
+                                    <Icons.Copy size={10} className="text-indigo-300"/>
+                                </div>
+                            </div>
                             <div className="flex gap-3 items-center flex-shrink-0">
                                 <button onClick={goHome} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition"><Icons.Home size={20}/></button>
                                 <button onClick={copyLink} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition relative"><Icons.Share size={20}/>{shareMsg && <span className="absolute -bottom-8 right-0 bg-black text-xs px-2 py-1 rounded">{shareMsg}</span>}</button>
@@ -430,7 +550,10 @@
                         </div>
                         {!isAdmin && showAdminAuth && (
                             <div className="max-w-md mx-auto mt-3 flex gap-2 admin-panel bg-white p-2 rounded-lg shadow-xl animate-fade-in">
-                                <input type="password" placeholder="Enter Admin Password" className="flex-1 p-2 rounded text-black border border-gray-300 outline-none" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)}/>
+                                <div className="relative flex-1 flex items-center">
+                                    <input type={showPassword ? "text" : "password"} placeholder="Enter Admin Password" className="w-full p-2 border rounded text-black outline-none pr-10" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)}/>
+                                    <button onClick={() => setShowPassword(!showPassword)} className="absolute right-2 text-gray-500 hover:text-gray-700">{showPassword ? <Icons.EyeOff size={18}/> : <Icons.Eye size={18}/>}</button>
+                                </div>
                                 <button onClick={adminLogin} className="bg-indigo-900 text-white px-4 rounded font-bold hover:bg-indigo-800">Login</button>
                             </div>
                         )}
@@ -438,18 +561,32 @@
                              <div className="max-w-md mx-auto mt-3 bg-white p-2 rounded text-black flex gap-2"><input readOnly value={window.location.href} className="flex-1 text-xs border p-1"/><button onClick={()=>setShowManualShare(false)}><Icons.X size={16}/></button></div>
                         )}
                     </div>
+
                     <div className="max-w-md mx-auto p-4 space-y-4 mt-4">
-                        <div className="bg-white/95 rounded-xl p-4 shadow-xl text-center flex justify-between divide-x mt-6">
+                        {/* Location Link Display */}
+                        {config.location && (
+                            <a href={config.location} target="_blank" rel="noopener noreferrer" className="block bg-blue-600/90 text-white p-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition font-bold">
+                                <Icons.MapPin size={20} /> 📍 Location Map
+                            </a>
+                        )}
+
+                        <div className="bg-white/95 rounded-xl p-4 shadow-xl text-center flex justify-between divide-x mt-2">
                             <div className="flex-1"><div className="text-xs text-gray-500 font-bold">TOTAL</div><div className="font-bold text-indigo-900 text-lg">{config.currency} {config.totalCost}</div></div>
                             <div className="flex-1"><div className="text-xs text-gray-500 font-bold">PER PERSON</div><div className="font-bold text-emerald-600 text-lg">{config.currency} {cost}</div></div>
                             <div className="flex-1"><div className="text-xs text-gray-500 font-bold">SLOTS</div><div className={`font-bold text-lg ${activeList.length>=config.maxPlayers?'text-red-500':'text-indigo-900'}`}>{activeList.length}/{config.maxPlayers}</div></div>
                         </div>
+                        
                         {isDeadlinePassed && <div className="bg-red-50 text-red-600 p-2 rounded text-center text-xs font-bold border border-red-200 flex items-center justify-center gap-2"><Icons.TimerOff size={14}/> Withdrawal deadline passed ({config.withdrawalTime})</div>}
+                        
                         {config.paymentInfoImage && <div className="flex gap-2"><button onClick={()=>setViewImage(config.paymentInfoImage)} className="w-full bg-white/90 py-3 rounded-lg font-bold text-indigo-700 text-sm shadow flex justify-center gap-2 hover:bg-white transition"><Icons.CreditCard size={18}/> Show Payment Info</button></div>}
+                        
                         {isAdmin && (
                             <div className="bg-white/95 p-4 rounded-xl shadow-xl admin-panel space-y-4 border-2 border-yellow-400">
                                 <div className="font-bold text-gray-800 border-b pb-2 flex justify-between items-center"><span>⚙️ Admin Control</span><button onClick={()=>setIsAdmin(false)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200 flex gap-1 items-center"><Icons.LogOut size={12}/> Exit Admin</button></div>
                                 <input type="text" value={config.title} onChange={e=>updateSetting('title', e.target.value)} className="w-full border p-2 rounded" placeholder="Event Title"/>
+                                
+                                <div><label className="text-xs text-gray-500">Stadium Location (Google Maps Link)</label><input type="text" value={config.location || ''} onChange={e=>updateSetting('location', e.target.value)} className="w-full border p-2 rounded" placeholder="Paste URL here..."/></div>
+
                                 <div className="grid grid-cols-2 gap-2"><input type="time" value={config.startTime} onChange={e=>updateSetting('startTime', e.target.value)} className="border p-2 rounded"/><input type="time" value={config.endTime} onChange={e=>updateSetting('endTime', e.target.value)} className="border p-2 rounded"/><input type="number" value={config.totalCost} onChange={e=>updateSetting('totalCost', Number(e.target.value))} className="border p-2 rounded" placeholder="Cost"/><input type="number" value={config.maxPlayers} onChange={e=>updateSetting('maxPlayers', Number(e.target.value))} className="border p-2 rounded" placeholder="Max"/></div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div><label className="text-xs text-gray-500">Date</label><input type="date" value={config.matchDate} onChange={e=>updateSetting('matchDate', e.target.value)} className="w-full border p-2 rounded"/></div>
