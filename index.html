@@ -116,6 +116,7 @@
             return [year, month, day].join('-');
         }
 
+        // Default Config
         const DEFAULT_CONFIG = { 
             title: 'Stadium Booking', 
             maxPlayers: 12, 
@@ -126,22 +127,25 @@
             adminPassword: '', 
             currency: 'RM', 
             paymentInfoImage: null,
-            withdrawalTime: '18:00',
+            withdrawalTime: `${getTodayDate()}T18:00`, // Updated to be full datetime
             location: ''
         };
 
         const { useState, useEffect, useRef } = React;
 
         function App() {
+            // App State
             const [view, setView] = useState('LOADING'); 
             const [bookingId, setBookingId] = useState(null);
             const [user, setUser] = useState(null);
             
+            // Data
             const [players, setPlayers] = useState([]);
             const [config, setConfig] = useState(DEFAULT_CONFIG);
             const [myBookings, setMyBookings] = useState([]);
             const [allMatches, setAllMatches] = useState([]);
 
+            // UI
             const [isAdmin, setIsAdmin] = useState(false);
             const [showAdminAuth, setShowAdminAuth] = useState(false);
             const [passwordInput, setPasswordInput] = useState('');
@@ -150,20 +154,20 @@
             const [newName, setNewName] = useState('');
             const [toast, setToast] = useState(null);
             
+            // Modals
             const [viewImage, setViewImage] = useState(null);
             const [showTeamGen, setShowTeamGen] = useState(false);
             const [teamCount, setTeamCount] = useState(2); 
             const [showCreateModal, setShowCreateModal] = useState(false);
             
+            // Create Modal State
             const [newBookingConfig, setNewBookingConfig] = useState({ title: 'Friendly Match', customId: '', password: '' });
             const [shareMsg, setShareMsg] = useState('');
             const [showManualShare, setShowManualShare] = useState(false);
             const [joinCodeInput, setJoinCodeInput] = useState('');
             const [createPassShow, setCreatePassShow] = useState(false); 
 
-            // Loading tracking ref to fix the "immediate delete" issue
             const isInitialLoad = useRef(true);
-
             const fileInputRef = useRef(null);
 
             const showToast = (msg, type = 'error') => {
@@ -179,8 +183,16 @@
                 }
             };
             
+            // Helper function to format time to 12-hour AM/PM
             const formatTime = (timeStr) => {
                 if (!timeStr) return '';
+                // Handle if timeStr includes date (ISO string)
+                if (timeStr.includes('T')) {
+                    const dateObj = new Date(timeStr);
+                    if (isNaN(dateObj.getTime())) return timeStr; // Fallback
+                    return dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
+                }
+
                 const [hour, minute] = timeStr.split(':');
                 const h = parseInt(hour, 10);
                 const ampm = h >= 12 ? 'PM' : 'AM';
@@ -211,7 +223,6 @@
             useEffect(() => {
                 if (!user || view !== 'BOOKING' || !bookingId) return;
                 
-                // Reset initial load state when booking changes
                 isInitialLoad.current = true;
 
                 const playersRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`);
@@ -223,20 +234,15 @@
                 const unsubC = configRef.onSnapshot(doc => {
                     if (doc.exists) {
                         const data = doc.data();
-                        // Expiration logic
-                        if (data.createdAt && (Date.now() - data.createdAt > (72*60*60*1000))) {
-                            // Don't delete here automatically to avoid confusion, just show expired
-                        }
                         setConfig({ ...DEFAULT_CONFIG, ...data });
-                        isInitialLoad.current = false; // Mark as successfully loaded
+                        isInitialLoad.current = false; 
                     } else { 
-                        // Doc doesn't exist.
-                        // If it's the very first load attempt, it might be an invalid link.
-                        // If it's NOT the first load (i.e. we were viewing it), it means it was DELETED.
-                        
+                        // Document does not exist (Deleted or Invalid)
                         if (!isInitialLoad.current) {
+                            // If we were already viewing it, it means it was deleted live
                             alert("The match has been cancelled by the host.");
-                            // Clean local history
+                            
+                            // Remove from local history
                             const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
                             const newHistory = history.filter(b => b.id !== bookingId);
                             localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
@@ -244,9 +250,9 @@
                             
                             goHome();
                         } else {
-                            // Initial load failed - probably invalid ID
+                            // Initial load failed - ID doesn't exist
                             alert("Booking not found or deleted.");
-                             goHome();
+                            goHome();
                         }
                         isInitialLoad.current = false;
                     }
@@ -452,8 +458,7 @@
             
             const deletePlayer = (id) => {
                 if (!isAdmin) {
-                    const deadlineStr = `${config.matchDate}T${config.withdrawalTime}`;
-                    const deadline = new Date(deadlineStr).getTime();
+                    const deadline = new Date(config.withdrawalTime).getTime();
                     if (!isNaN(deadline) && Date.now() > deadline) {
                          return showToast(`Cannot withdraw. Deadline passed at ${formatTime(config.withdrawalTime)}`, "error");
                     }
@@ -765,7 +770,7 @@
                                 <div className="grid grid-cols-2 gap-2"><input type="time" value={config.startTime} onChange={e=>updateSetting('startTime', e.target.value)} className="border p-2 rounded"/><input type="time" value={config.endTime} onChange={e=>updateSetting('endTime', e.target.value)} className="border p-2 rounded"/><input type="number" value={config.totalCost} onChange={e=>updateSetting('totalCost', Number(e.target.value))} className="border p-2 rounded" placeholder="Cost"/><input type="number" value={config.maxPlayers} onChange={e=>updateSetting('maxPlayers', Number(e.target.value))} className="border p-2 rounded" placeholder="Max"/></div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div><label className="text-xs text-gray-500">Date</label><input type="date" value={config.matchDate} onChange={e=>updateSetting('matchDate', e.target.value)} className="w-full border p-2 rounded"/></div>
-                                    <div><label className="text-xs text-red-500 font-bold">Lock Withdrawal</label><input type="time" value={config.withdrawalTime} onChange={e=>updateSetting('withdrawalTime', e.target.value)} className="w-full border p-2 rounded border-red-200"/></div>
+                                    <div><label className="text-xs text-red-500 font-bold">Lock Withdrawal</label><input type="datetime-local" value={config.withdrawalTime} onChange={e=>updateSetting('withdrawalTime', e.target.value)} className="w-full border p-2 rounded border-red-200"/></div>
                                 </div>
                                 <div className="flex items-center gap-2 bg-gray-100 p-2 rounded"><div className="text-xs font-bold text-gray-500">QR Image:</div><input type="file" onChange={e=>uploadImage(e.target.files[0], 'paymentInfoImage')} className="text-xs"/></div>
                                 <div className="bg-gray-100 p-2 rounded mt-2"><div className="text-xs font-bold text-gray-500 mb-1">Security (Password)</div><div className="flex gap-2"><input type="text" value={newPasswordInput} onChange={e=>setNewPasswordInput(e.target.value)} className="flex-1 border p-1 rounded text-xs" placeholder="New Password"/><button onClick={changeAdminPassword} className="bg-slate-800 text-white px-3 py-1 rounded text-xs font-bold">Update</button></div></div>
@@ -774,7 +779,7 @@
                                         <button onClick={()=>setShowTeamGen(true)} className="flex-1 bg-blue-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-blue-600">Make Teams</button>
                                         <button onClick={resetPlayersList} className="flex-1 bg-orange-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-orange-600">Reset Players</button>
                                     </div>
-                                    <button onClick={deleteBookingCompletely} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">DELETE BOOKING PERMANENTLY</button>
+                                    <button onClick={() => deleteBookingCompletely(bookingId)} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">DELETE BOOKING PERMANENTLY</button>
                                 </div>
                             </div>
                         )}
