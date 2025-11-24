@@ -225,15 +225,17 @@
                         setConfig({ ...DEFAULT_CONFIG, ...data });
                     } else { 
                         // Document deleted from server -> Clean up local state
-                        alert("Booking deleted by admin.");
-                        
-                        // Clean local storage
-                        const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
-                        const newHistory = history.filter(b => b.id !== bookingId);
-                        localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
-                        setMyBookings(newHistory);
-                        
-                        goHome();
+                        if (!loading) { // Only alert if we were already loaded
+                            alert("This booking has been deleted by the admin.");
+                            
+                            // Clean local storage
+                            const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
+                            const newHistory = history.filter(b => b.id !== bookingId);
+                            localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
+                            setMyBookings(newHistory);
+                            
+                            goHome();
+                        }
                     }
                 });
                 return () => { unsubP(); unsubC(); };
@@ -282,13 +284,35 @@
                 safePushState({}, '', window.location.pathname); 
             };
 
-            const joinMatch = () => {
+            const joinMatch = async () => {
                 if (!joinCodeInput.trim()) return showToast("Please enter a match code", "error");
                 const code = joinCodeInput.trim();
-                setBookingId(code);
-                setView('BOOKING');
-                const newUrl = `${window.location.pathname}?id=${code}`;
-                safePushState({path: newUrl}, '', newUrl);
+                
+                // Validate code existence
+                try {
+                    const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(code);
+                    const docSnap = await docRef.get();
+                    
+                    if (!docSnap.exists) {
+                        return showToast("Invalid Match Code. Please check and try again.", "error");
+                    }
+
+                    setBookingId(code);
+                    setView('BOOKING');
+                    const newUrl = `${window.location.pathname}?id=${code}`;
+                    safePushState({path: newUrl}, '', newUrl);
+                    
+                    // Add to history
+                    if (!myBookings.find(b => b.id === code)) {
+                        const data = docSnap.data();
+                        const newHistory = [{ id: code, title: data.title, date: data.matchDate || new Date().toLocaleDateString() }, ...myBookings];
+                        localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
+                        setMyBookings(newHistory);
+                    }
+                } catch (error) {
+                    console.error("Join Error:", error);
+                    showToast("Error checking code", "error");
+                }
             };
 
             const startCreateProcess = () => {
@@ -430,11 +454,6 @@
             const deleteBookingCompletely = async (idToDelete = bookingId) => {
                 if (!confirm("PERMANENTLY DELETE this booking?")) return;
                 
-                // Also remove from LOCAL storage first to update UI immediately
-                const h = myBookings.filter(b => b.id !== idToDelete);
-                localStorage.setItem('bookingHistory', JSON.stringify(h));
-                setMyBookings(h);
-
                 const playersSnap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${idToDelete}`).get();
                 const batch = db.batch();
                 playersSnap.forEach(doc => batch.delete(doc.ref));
@@ -443,6 +462,9 @@
                 await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(idToDelete).delete();
                 
                 if (idToDelete === bookingId) {
+                    const h = myBookings.filter(b => b.id !== idToDelete);
+                    localStorage.setItem('bookingHistory', JSON.stringify(h));
+                    setMyBookings(h);
                     showToast("Booking Deleted!", "success"); 
                     goHome();
                 } else {
