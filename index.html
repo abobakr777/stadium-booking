@@ -134,15 +134,18 @@
         const { useState, useEffect, useRef } = React;
 
         function App() {
+            // App State
             const [view, setView] = useState('LOADING'); 
             const [bookingId, setBookingId] = useState(null);
             const [user, setUser] = useState(null);
             
+            // Data
             const [players, setPlayers] = useState([]);
             const [config, setConfig] = useState(DEFAULT_CONFIG);
             const [myBookings, setMyBookings] = useState([]);
             const [allMatches, setAllMatches] = useState([]);
 
+            // UI
             const [isAdmin, setIsAdmin] = useState(false);
             const [showAdminAuth, setShowAdminAuth] = useState(false);
             const [passwordInput, setPasswordInput] = useState('');
@@ -152,11 +155,13 @@
             const [toast, setToast] = useState(null);
             const [timeLeft, setTimeLeft] = useState('');
             
+            // Modals
             const [viewImage, setViewImage] = useState(null);
             const [showTeamGen, setShowTeamGen] = useState(false);
             const [teamCount, setTeamCount] = useState(2); 
             const [showCreateModal, setShowCreateModal] = useState(false);
             
+            // Create Modal State
             const [newBookingConfig, setNewBookingConfig] = useState({ title: 'Friendly Match', customId: '', password: '' });
             const [shareMsg, setShareMsg] = useState('');
             const [showManualShare, setShowManualShare] = useState(false);
@@ -202,6 +207,7 @@
                 return isLongEnough && hasUpperCase && hasLowerCase && hasNumber;
             };
 
+            // Countdown Effect
             useEffect(() => {
                 if (view !== 'BOOKING' || !config.matchDate || !config.startTime) return;
                 const timer = setInterval(() => {
@@ -308,11 +314,10 @@
                 loadAllMatches();
             };
 
-            // --- FIXED goHome to reset admin state ---
             const goHome = () => { 
                 setView('HOME'); 
                 setBookingId(null); 
-                setIsAdmin(false); // Ensure we log out from match admin
+                setIsAdmin(false);
                 safePushState({}, '', window.location.pathname); 
             };
 
@@ -477,6 +482,7 @@
             
             const deleteBookingCompletely = async (idToDelete = bookingId) => {
                 if (!confirm("PERMANENTLY DELETE this booking?")) return;
+                // FIX: Use correct variable name idToDelete instead of bookingId inside map/filter
                 
                 const playersSnap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${idToDelete}`).get();
                 const batch = db.batch();
@@ -492,7 +498,7 @@
 
                 if (idToDelete === bookingId) {
                     showToast("Booking Deleted!", "success"); 
-                    goHome(); // This now handles logout correctly
+                    goHome();
                 } else {
                     loadAllMatches();
                     showToast("Match Deleted", "success");
@@ -793,7 +799,7 @@
                                         <button onClick={()=>setShowTeamGen(true)} className="flex-1 bg-blue-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-blue-600">Make Teams</button>
                                         <button onClick={resetPlayersList} className="flex-1 bg-orange-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-orange-600">Reset Players</button>
                                     </div>
-                                    <button onClick={deleteBookingCompletely} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">DELETE BOOKING PERMANENTLY</button>
+                                    <button onClick={() => deleteBookingCompletely(bookingId)} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">DELETE BOOKING PERMANENTLY</button>
                                 </div>
                             </div>
                         )}
