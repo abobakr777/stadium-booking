@@ -221,7 +221,11 @@
                     if (doc.exists) {
                         const data = doc.data();
                         setConfig({ ...DEFAULT_CONFIG, ...data });
-                    } else { setConfig(DEFAULT_CONFIG); }
+                    } else { 
+                        // If it doesn't exist, assume invalid code
+                        // We'll handle this with an alert in UI or simple fallback
+                         setConfig(DEFAULT_CONFIG); 
+                    }
                 });
                 return () => { unsubP(); unsubC(); };
             }, [user, view, bookingId]);
@@ -239,7 +243,7 @@
                     setAllMatches(matches);
                 } catch (error) {
                     console.error("Error loading matches", error);
-                    showToast("Could not load matches (Permission Error?)", "error");
+                    showToast("Could not load matches", "error");
                 }
             };
             
@@ -269,13 +273,35 @@
                 safePushState({}, '', window.location.pathname); 
             };
 
-            const joinMatch = () => {
+            const joinMatch = async () => {
                 if (!joinCodeInput.trim()) return showToast("Please enter a match code", "error");
                 const code = joinCodeInput.trim();
-                setBookingId(code);
-                setView('BOOKING');
-                const newUrl = `${window.location.pathname}?id=${code}`;
-                safePushState({path: newUrl}, '', newUrl);
+                
+                // Validate code existence
+                try {
+                    const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(code);
+                    const docSnap = await docRef.get();
+                    
+                    if (!docSnap.exists) {
+                        return showToast("Invalid Match Code. Please check and try again.", "error");
+                    }
+
+                    setBookingId(code);
+                    setView('BOOKING');
+                    const newUrl = `${window.location.pathname}?id=${code}`;
+                    safePushState({path: newUrl}, '', newUrl);
+                    
+                    // Add to history
+                    if (!myBookings.find(b => b.id === code)) {
+                        const data = docSnap.data();
+                        const newHistory = [{ id: code, title: data.title, date: data.matchDate || new Date().toLocaleDateString() }, ...myBookings];
+                        localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
+                        setMyBookings(newHistory);
+                    }
+                } catch (error) {
+                    console.error("Join Error:", error);
+                    showToast("Error checking code", "error");
+                }
             };
 
             const startCreateProcess = () => {
@@ -437,13 +463,6 @@
             };
             const copyCode = () => {
                 navigator.clipboard.writeText(bookingId).then(() => showToast("Match Code Copied!", "success")).catch(() => prompt("Copy Code:", bookingId));
-            };
-            const copyList = () => {
-                const active = players.sort((a,b)=>a.createdAt-b.createdAt).slice(0, config.maxPlayers);
-                let t = `⚽ *${config.title}*\n📅 ${new Date().toLocaleDateString()} | ⏰ ${formatTime(config.startTime)} - ${formatTime(config.endTime)}\n\n`;
-                active.forEach((p, i) => t += `${i+1}. ${p.name} ${p.isPaid?'✅':'❌'}\n`);
-                t += `\n🔗 ${window.location.href}`;
-                navigator.clipboard.writeText(t).then(() => showToast("List Copied!", "success")).catch(() => showToast("Failed to copy", "error"));
             };
             const copyLink = () => {
                 const url = window.location.href;
@@ -756,10 +775,6 @@
                             <div className="mt-6"><div className="text-white font-bold text-sm mb-2 opacity-90 uppercase tracking-wider">Waitlist</div>{waitList.map((p, i) => (<div key={p.id} className="bg-orange-50/90 p-3 rounded-xl flex justify-between items-center mb-2 border border-orange-200 shadow-sm"><div className="flex items-center gap-3"><span className="font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded text-xs">W-{i+1}</span><span className="font-bold text-slate-700">{p.name}</span></div>{(isAdmin || (user && user.uid === p.createdBy && !isDeadlinePassed)) && <button onClick={()=>deletePlayer(p.id)} className="text-orange-400 hover:text-red-500"><Icons.Trash2 size={18}/></button>}</div>))}</div>
                         )}
                     </div>
-
-                    {/* Copy List Button - Now using formatTime */}
-                    {/* If you wanted to add back the copy list button, you would do it here, but user asked to remove it previously. */}
-                    
                     {viewImage && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" onClick={()=>setViewImage(null)}><img src={viewImage} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl border-4 border-white"/></div>}
                     {showTeamGen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={()=>setShowTeamGen(false)}><div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" onClick={e=>e.stopPropagation()}><div className="bg-indigo-600 p-4 text-white font-bold flex justify-between items-center"><span className="flex items-center gap-2"><Icons.Activity size={20}/> Team Generator</span><button onClick={()=>setShowTeamGen(false)}><Icons.X size={24}/></button></div><div className="p-6 text-center"><div className="flex items-center justify-center gap-6 mb-8"><button className="bg-gray-200 w-12 h-12 rounded-full font-bold text-2xl hover:bg-gray-300 flex items-center justify-center shadow" onClick={()=>setTeamCount(Math.max(2, teamCount-1))}>-</button><div className="text-center"><span className="block font-bold text-3xl text-indigo-900">{teamCount}</span><span className="text-xs text-gray-500 uppercase font-bold">Teams</span></div><button className="bg-gray-200 w-12 h-12 rounded-full font-bold text-2xl hover:bg-gray-300 flex items-center justify-center shadow" onClick={()=>setTeamCount(teamCount+1)}>+</button></div><button onClick={generateTeams} className="bg-indigo-600 text-white px-6 py-4 rounded-xl font-bold w-full shadow-lg hover:bg-indigo-700 text-lg">SHUFFLE & SHOW</button></div></div></div>}
                 </div>
