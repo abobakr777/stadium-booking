@@ -217,11 +217,24 @@
                 const playersRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`);
                 const configRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(bookingId);
                 const unsubP = playersRef.onSnapshot(snap => setPlayers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+                
+                // IMPORTANT: Auto-handle Deleted Bookings
                 const unsubC = configRef.onSnapshot(doc => {
                     if (doc.exists) {
                         const data = doc.data();
                         setConfig({ ...DEFAULT_CONFIG, ...data });
-                    } else { setConfig(DEFAULT_CONFIG); }
+                    } else { 
+                        // Document deleted from server -> Clean up local state
+                        alert("Booking deleted by admin.");
+                        
+                        // Clean local storage
+                        const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
+                        const newHistory = history.filter(b => b.id !== bookingId);
+                        localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
+                        setMyBookings(newHistory);
+                        
+                        goHome();
+                    }
                 });
                 return () => { unsubP(); unsubC(); };
             }, [user, view, bookingId]);
