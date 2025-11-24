@@ -134,18 +134,15 @@
         const { useState, useEffect, useRef } = React;
 
         function App() {
-            // App State
             const [view, setView] = useState('LOADING'); 
             const [bookingId, setBookingId] = useState(null);
             const [user, setUser] = useState(null);
             
-            // Data
             const [players, setPlayers] = useState([]);
             const [config, setConfig] = useState(DEFAULT_CONFIG);
             const [myBookings, setMyBookings] = useState([]);
             const [allMatches, setAllMatches] = useState([]);
 
-            // UI
             const [isAdmin, setIsAdmin] = useState(false);
             const [showAdminAuth, setShowAdminAuth] = useState(false);
             const [passwordInput, setPasswordInput] = useState('');
@@ -155,13 +152,11 @@
             const [toast, setToast] = useState(null);
             const [timeLeft, setTimeLeft] = useState('');
             
-            // Modals
             const [viewImage, setViewImage] = useState(null);
             const [showTeamGen, setShowTeamGen] = useState(false);
             const [teamCount, setTeamCount] = useState(2); 
             const [showCreateModal, setShowCreateModal] = useState(false);
             
-            // Create Modal State
             const [newBookingConfig, setNewBookingConfig] = useState({ title: 'Friendly Match', customId: '', password: '' });
             const [shareMsg, setShareMsg] = useState('');
             const [showManualShare, setShowManualShare] = useState(false);
@@ -185,7 +180,6 @@
                 }
             };
             
-            // Helper function to format time to 12-hour AM/PM
             const formatTime = (timeStr) => {
                 if (!timeStr) return '';
                 if (timeStr.includes('T')) {
@@ -208,17 +202,13 @@
                 return isLongEnough && hasUpperCase && hasLowerCase && hasNumber;
             };
 
-            // Countdown Effect
             useEffect(() => {
                 if (view !== 'BOOKING' || !config.matchDate || !config.startTime) return;
-
                 const timer = setInterval(() => {
                     const now = new Date();
                     const matchStart = new Date(`${config.matchDate}T${config.startTime}`);
                     if (isNaN(matchStart.getTime())) return; 
-
                     const diff = matchStart - now;
-
                     if (diff <= 0) {
                         setTimeLeft('Match Started');
                     } else {
@@ -226,14 +216,12 @@
                         const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                        
                         let timeString = '';
                         if (days > 0) timeString += `${days}d `;
                         timeString += `${hours}h ${minutes}m ${seconds}s`;
                         setTimeLeft(timeString);
                     }
                 }, 1000);
-
                 return () => clearInterval(timer);
             }, [view, config.matchDate, config.startTime]);
 
@@ -252,9 +240,7 @@
 
             useEffect(() => {
                 if (!user || view !== 'BOOKING' || !bookingId) return;
-                
                 isInitialLoad.current = true;
-
                 const playersRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`);
                 const configRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(bookingId);
 
@@ -267,6 +253,8 @@
                         isInitialLoad.current = false; 
                     } else { 
                         if (!isInitialLoad.current) {
+                            // FIX: Immediate logout from admin mode on deletion
+                            setIsAdmin(false); 
                             alert("The match has been cancelled by the host.");
                             const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
                             const newHistory = history.filter(b => b.id !== bookingId);
@@ -320,9 +308,11 @@
                 loadAllMatches();
             };
 
+            // --- FIXED goHome to reset admin state ---
             const goHome = () => { 
                 setView('HOME'); 
                 setBookingId(null); 
+                setIsAdmin(false); // Ensure we log out from match admin
                 safePushState({}, '', window.location.pathname); 
             };
 
@@ -358,12 +348,10 @@
             
             const confirmCreateBooking = async () => {
                 if (!user) return showToast("Connecting...", "error");
-                
                 if (!isStrongPassword(newBookingConfig.password)) {
                      showToast("Password must have: Min 8 chars, 1 Uppercase, 1 Lowercase, 1 Number.", "error");
                      return;
                 }
-
                 let newId = newBookingConfig.customId.trim();
                 if (!newId) {
                      newId = Math.random().toString(36).substring(2, 10);
@@ -371,13 +359,10 @@
                     newId = newId.replace(/[^a-zA-Z0-9-_]/g, '');
                     if (!newId) return showToast("Invalid characters in Match Code", "error");
                 }
-
                 const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(newId);
                 const docSnap = await docRef.get();
                 if (docSnap.exists) return showToast("Match Code already taken!", "error");
-
                 setShowCreateModal(false);
-                
                 const now = Date.now();
                 try {
                     await docRef.set({
@@ -388,14 +373,11 @@
                         createdBy: user.uid,
                         withdrawalTime: `${getTodayDate()}T18:00` 
                     });
-                    
                     const newHistory = [{ id: newId, title: newBookingConfig.title, date: new Date().toLocaleDateString(), timestamp: now }, ...myBookings];
                     localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
                     setMyBookings(newHistory);
                     setBookingId(newId); 
-                    
                     setIsAdmin(true); 
-                    
                     setView('BOOKING');
                     const newUrl = `${window.location.pathname}?id=${newId}`;
                     safePushState({path: newUrl}, '', newUrl);
@@ -424,17 +406,6 @@
                 }
             };
 
-            // Secret Admin Login via Title Click
-            const handleTitleClick = () => {
-                const newCount = titleClicks + 1;
-                setTitleClicks(newCount);
-                if (newCount >= 5) {
-                    setShowAdminAuth(true);
-                    setTitleClicks(0);
-                }
-            };
-
-            // Global Admin Login for Home
             const homeAdminLogin = (e) => {
                 e.preventDefault();
                 if (passwordInput === MASTER_KEY) {
@@ -446,6 +417,15 @@
                     showToast("Incorrect Master Key", "error");
                 }
             };
+            
+            const handleTitleClick = () => {
+                const newCount = titleClicks + 1;
+                setTitleClicks(newCount);
+                if (newCount >= 5) {
+                    setShowAdminAuth(true);
+                    setTitleClicks(0);
+                }
+            };
 
             const updateSetting = (k, v) => db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(bookingId).update({ [k]: v });
             
@@ -453,7 +433,6 @@
                 if (!isStrongPassword(newPasswordInput)) {
                     return showToast("Password must have: Min 8 chars, 1 Uppercase, 1 Lowercase, 1 Number.", "error");
                 }
-
                 updateSetting('adminPassword', newPasswordInput); 
                 setNewPasswordInput(''); 
                 showToast("Password Updated Successfully", "success");
@@ -513,7 +492,7 @@
 
                 if (idToDelete === bookingId) {
                     showToast("Booking Deleted!", "success"); 
-                    goHome();
+                    goHome(); // This now handles logout correctly
                 } else {
                     loadAllMatches();
                     showToast("Match Deleted", "success");
@@ -748,10 +727,6 @@
                             <div className="flex-1 min-w-0 pr-2">
                                 <h1 className="font-bold text-lg truncate">{config.title}</h1>
                                 <div className="text-xs opacity-75 flex gap-2 items-center"><Icons.Calendar size={12}/> {config.matchDate} <span className="mx-1">|</span> <Icons.Clock size={12}/> {formatTime(config.startTime)} - {formatTime(config.endTime)}</div>
-                                
-                                {/* COUNTDOWN TIMER (New) */}
-                                {timeLeft && <div className="text-[10px] font-bold text-yellow-300 mt-1 animate-pulse">⏳ {timeLeft}</div>}
-                                
                                 {/* Match Code Display */}
                                 <div className="flex items-center gap-2 mt-1 bg-black/20 w-fit px-2 py-0.5 rounded cursor-pointer hover:bg-black/40 transition" onClick={copyCode}>
                                     <span className="text-[10px] font-mono text-indigo-200">CODE:</span>
@@ -818,7 +793,7 @@
                                         <button onClick={()=>setShowTeamGen(true)} className="flex-1 bg-blue-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-blue-600">Make Teams</button>
                                         <button onClick={resetPlayersList} className="flex-1 bg-orange-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-orange-600">Reset Players</button>
                                     </div>
-                                    <button onClick={() => deleteBookingCompletely(bookingId)} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">DELETE BOOKING PERMANENTLY</button>
+                                    <button onClick={deleteBookingCompletely} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">DELETE BOOKING PERMANENTLY</button>
                                 </div>
                             </div>
                         )}
