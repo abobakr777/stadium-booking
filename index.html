@@ -221,11 +221,7 @@
                     if (doc.exists) {
                         const data = doc.data();
                         setConfig({ ...DEFAULT_CONFIG, ...data });
-                    } else { 
-                        // If it doesn't exist, assume invalid code
-                        // We'll handle this with an alert in UI or simple fallback
-                         setConfig(DEFAULT_CONFIG); 
-                    }
+                    } else { setConfig(DEFAULT_CONFIG); }
                 });
                 return () => { unsubP(); unsubC(); };
             }, [user, view, bookingId]);
@@ -273,35 +269,13 @@
                 safePushState({}, '', window.location.pathname); 
             };
 
-            const joinMatch = async () => {
+            const joinMatch = () => {
                 if (!joinCodeInput.trim()) return showToast("Please enter a match code", "error");
                 const code = joinCodeInput.trim();
-                
-                // Validate code existence
-                try {
-                    const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(code);
-                    const docSnap = await docRef.get();
-                    
-                    if (!docSnap.exists) {
-                        return showToast("Invalid Match Code. Please check and try again.", "error");
-                    }
-
-                    setBookingId(code);
-                    setView('BOOKING');
-                    const newUrl = `${window.location.pathname}?id=${code}`;
-                    safePushState({path: newUrl}, '', newUrl);
-                    
-                    // Add to history
-                    if (!myBookings.find(b => b.id === code)) {
-                        const data = docSnap.data();
-                        const newHistory = [{ id: code, title: data.title, date: data.matchDate || new Date().toLocaleDateString() }, ...myBookings];
-                        localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
-                        setMyBookings(newHistory);
-                    }
-                } catch (error) {
-                    console.error("Join Error:", error);
-                    showToast("Error checking code", "error");
-                }
+                setBookingId(code);
+                setView('BOOKING');
+                const newUrl = `${window.location.pathname}?id=${code}`;
+                safePushState({path: newUrl}, '', newUrl);
             };
 
             const startCreateProcess = () => {
@@ -443,6 +417,11 @@
             const deleteBookingCompletely = async (idToDelete = bookingId) => {
                 if (!confirm("PERMANENTLY DELETE this booking?")) return;
                 
+                // Also remove from LOCAL storage first to update UI immediately
+                const h = myBookings.filter(b => b.id !== idToDelete);
+                localStorage.setItem('bookingHistory', JSON.stringify(h));
+                setMyBookings(h);
+
                 const playersSnap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${idToDelete}`).get();
                 const batch = db.batch();
                 playersSnap.forEach(doc => batch.delete(doc.ref));
@@ -451,9 +430,6 @@
                 await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(idToDelete).delete();
                 
                 if (idToDelete === bookingId) {
-                    const h = myBookings.filter(b => b.id !== idToDelete);
-                    localStorage.setItem('bookingHistory', JSON.stringify(h));
-                    setMyBookings(h);
                     showToast("Booking Deleted!", "success"); 
                     goHome();
                 } else {
@@ -509,7 +485,6 @@
                                 </button>
                             </div>
                             <button onClick={homeAdminLogin} className="bg-indigo-900 text-white px-3 rounded font-bold py-2">Login (Global Admin)</button>
-                            {toast && toast.type === 'error' && <div className="text-red-500 text-xs font-bold">{toast.msg}</div>}
                         </div>
                     )}
 
