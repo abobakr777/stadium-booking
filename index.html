@@ -133,18 +133,15 @@
         const { useState, useEffect, useRef } = React;
 
         function App() {
-            // App State
             const [view, setView] = useState('LOADING'); 
             const [bookingId, setBookingId] = useState(null);
             const [user, setUser] = useState(null);
             
-            // Data
             const [players, setPlayers] = useState([]);
             const [config, setConfig] = useState(DEFAULT_CONFIG);
             const [myBookings, setMyBookings] = useState([]);
             const [allMatches, setAllMatches] = useState([]);
 
-            // UI
             const [isAdmin, setIsAdmin] = useState(false);
             const [showAdminAuth, setShowAdminAuth] = useState(false);
             const [passwordInput, setPasswordInput] = useState('');
@@ -153,18 +150,19 @@
             const [newName, setNewName] = useState('');
             const [toast, setToast] = useState(null);
             
-            // Modals
             const [viewImage, setViewImage] = useState(null);
             const [showTeamGen, setShowTeamGen] = useState(false);
             const [teamCount, setTeamCount] = useState(2); 
             const [showCreateModal, setShowCreateModal] = useState(false);
             
-            // Create Modal State
             const [newBookingConfig, setNewBookingConfig] = useState({ title: 'Friendly Match', customId: '', password: '' });
             const [shareMsg, setShareMsg] = useState('');
             const [showManualShare, setShowManualShare] = useState(false);
             const [joinCodeInput, setJoinCodeInput] = useState('');
             const [createPassShow, setCreatePassShow] = useState(false); 
+
+            // Loading tracking ref to fix the "immediate delete" issue
+            const isInitialLoad = useRef(true);
 
             const fileInputRef = useRef(null);
 
@@ -181,7 +179,6 @@
                 }
             };
             
-            // Helper function to format time to 12-hour AM/PM
             const formatTime = (timeStr) => {
                 if (!timeStr) return '';
                 const [hour, minute] = timeStr.split(':');
@@ -191,7 +188,6 @@
                 return `${h12}:${minute} ${ampm}`;
             };
 
-            // Password Validation Logic
             const isStrongPassword = (password) => {
                 const hasUpperCase = /[A-Z]/.test(password);
                 const hasLowerCase = /[a-z]/.test(password);
@@ -214,28 +210,45 @@
 
             useEffect(() => {
                 if (!user || view !== 'BOOKING' || !bookingId) return;
+                
+                // Reset initial load state when booking changes
+                isInitialLoad.current = true;
+
                 const playersRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`);
                 const configRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(bookingId);
+
                 const unsubP = playersRef.onSnapshot(snap => setPlayers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
                 
-                // IMPORTANT: Auto-handle Deleted Bookings
+                // --- CRITICAL FIX: Handle Deletion Properly ---
                 const unsubC = configRef.onSnapshot(doc => {
                     if (doc.exists) {
                         const data = doc.data();
+                        // Expiration logic
+                        if (data.createdAt && (Date.now() - data.createdAt > (72*60*60*1000))) {
+                            // Don't delete here automatically to avoid confusion, just show expired
+                        }
                         setConfig({ ...DEFAULT_CONFIG, ...data });
+                        isInitialLoad.current = false; // Mark as successfully loaded
                     } else { 
-                        // Document deleted from server -> Clean up local state
-                        if (!loading) { // Only alert if we were already loaded
-                            alert("This booking has been deleted by the admin.");
-                            
-                            // Clean local storage
+                        // Doc doesn't exist.
+                        // If it's the very first load attempt, it might be an invalid link.
+                        // If it's NOT the first load (i.e. we were viewing it), it means it was DELETED.
+                        
+                        if (!isInitialLoad.current) {
+                            alert("The match has been cancelled by the host.");
+                            // Clean local history
                             const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
                             const newHistory = history.filter(b => b.id !== bookingId);
                             localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
                             setMyBookings(newHistory);
                             
                             goHome();
+                        } else {
+                            // Initial load failed - probably invalid ID
+                            alert("Booking not found or deleted.");
+                             goHome();
                         }
+                        isInitialLoad.current = false;
                     }
                 });
                 return () => { unsubP(); unsubC(); };
@@ -302,12 +315,12 @@
                     const newUrl = `${window.location.pathname}?id=${code}`;
                     safePushState({path: newUrl}, '', newUrl);
                     
-                    // Add to history
+                    // Add to history if valid
                     if (!myBookings.find(b => b.id === code)) {
-                        const data = docSnap.data();
-                        const newHistory = [{ id: code, title: data.title, date: data.matchDate || new Date().toLocaleDateString() }, ...myBookings];
-                        localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
-                        setMyBookings(newHistory);
+                         const data = docSnap.data();
+                         const newHistory = [{ id: code, title: data.title, date: data.matchDate || new Date().toLocaleDateString() }, ...myBookings];
+                         localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
+                         setMyBookings(newHistory);
                     }
                 } catch (error) {
                     console.error("Join Error:", error);
@@ -461,10 +474,13 @@
 
                 await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(idToDelete).delete();
                 
+                // Update local storage regardless of where we are
+                const h = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
+                const newHistory = h.filter(b => b.id !== idToDelete);
+                localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
+                setMyBookings(newHistory);
+
                 if (idToDelete === bookingId) {
-                    const h = myBookings.filter(b => b.id !== idToDelete);
-                    localStorage.setItem('bookingHistory', JSON.stringify(h));
-                    setMyBookings(h);
                     showToast("Booking Deleted!", "success"); 
                     goHome();
                 } else {
