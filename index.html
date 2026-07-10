@@ -52,7 +52,7 @@
         // --- Error Handling ---
         window.onerror = function(msg) {
             const root = document.getElementById('root');
-            if(!root.innerHTML) root.innerHTML = `<div style="color:white;text-align:center;padding:50px;"><h2>⚠️ Error</h2><p>${msg}</p><button onclick="location.reload()" style="background:white;color:black;padding:10px;margin-top:10px;">Reload</button></div>`;
+            if(!root.innerHTML) root.innerHTML = `<div style="color:white;text-align:center;padding:50px;" dir="ltr"><h2>⚠️ Error</h2><p>${msg}</p><button onclick="location.reload()" style="background:white;color:black;padding:10px;margin-top:10px;">Reload</button></div>`;
         };
 
         // --- Firebase Config ---
@@ -106,8 +106,6 @@
 
         const MASTER_KEY = "Football@b7"; 
         const IMAGE_SIZE_LIMIT_KB = 700;
-        const EXPIRATION_HOURS = 72;
-        const EXPIRATION_MS = EXPIRATION_HOURS * 60 * 60 * 1000;
         
         const getTodayDate = () => {
             const d = new Date();
@@ -118,7 +116,7 @@
         }
 
         const DEFAULT_CONFIG = { 
-            title: 'Stadium Booking', 
+            title: 'مباراة ودية', 
             maxPlayers: 12, 
             matchDate: getTodayDate(),
             startTime: '20:00', 
@@ -127,7 +125,7 @@
             adminPassword: '', 
             currency: 'RM', 
             paymentInfoImage: null,
-            withdrawalTime: '18:00',
+            withdrawalTime: `${getTodayDate()}T18:00`,
             location: ''
         };
 
@@ -151,7 +149,12 @@
             const [passwordInput, setPasswordInput] = useState('');
             const [showPassword, setShowPassword] = useState(false);
             const [newPasswordInput, setNewPasswordInput] = useState('');
+            
+            // New Player Registration Data
             const [newName, setNewName] = useState('');
+            const [newPosition, setNewPosition] = useState('هجوم');
+            const [newLevel, setNewLevel] = useState('متوسط');
+
             const [toast, setToast] = useState(null);
             const [timeLeft, setTimeLeft] = useState('');
             
@@ -162,7 +165,7 @@
             const [showCreateModal, setShowCreateModal] = useState(false);
             
             // Create Modal State
-            const [newBookingConfig, setNewBookingConfig] = useState({ title: 'Friendly Match', customId: '', password: '' });
+            const [newBookingConfig, setNewBookingConfig] = useState({ title: 'مباراة ودية', customId: '', password: '' });
             const [shareMsg, setShareMsg] = useState('');
             const [showManualShare, setShowManualShare] = useState(false);
             const [joinCodeInput, setJoinCodeInput] = useState('');
@@ -216,21 +219,20 @@
                     if (isNaN(matchStart.getTime())) return; 
                     const diff = matchStart - now;
                     if (diff <= 0) {
-                        setTimeLeft('Match Started');
+                        setTimeLeft('المباراة بدأت ⚽');
                     } else {
                         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                         const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
                         let timeString = '';
-                        if (days > 0) timeString += `${days}d `;
-                        timeString += `${hours}h ${minutes}m ${seconds}s`;
+                        if (days > 0) timeString += `${days}يوم `;
+                        timeString += `${hours}س ${minutes}د ${seconds}ث`;
                         setTimeLeft(timeString);
                     }
                 }, 1000);
                 return () => clearInterval(timer);
             }, [view, config.matchDate, config.startTime]);
-
 
             useEffect(() => {
                 const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
@@ -259,16 +261,15 @@
                         isInitialLoad.current = false; 
                     } else { 
                         if (!isInitialLoad.current) {
-                            // FIX: Immediate logout from admin mode on deletion
                             setIsAdmin(false); 
-                            alert("The match has been cancelled by the host.");
+                            alert("تم إلغاء المباراة من قبل المشرف.");
                             const history = JSON.parse(localStorage.getItem('bookingHistory') || '[]');
                             const newHistory = history.filter(b => b.id !== bookingId);
                             localStorage.setItem('bookingHistory', JSON.stringify(newHistory));
                             setMyBookings(newHistory);
                             goHome();
                         } else {
-                            alert("Booking not found or deleted.");
+                            alert("هذا الحجز غير موجود أو تم حذفه.");
                             goHome();
                         }
                         isInitialLoad.current = false;
@@ -295,11 +296,11 @@
             };
             
             const deleteExpiredMatches = async () => {
-                if (!confirm("Delete all matches where the date has passed?")) return;
+                if (!confirm("هل أنت متأكد من حذف جميع المباريات القديمة؟")) return;
                 const today = new Date().toISOString().split('T')[0];
                 const expired = allMatches.filter(m => m.matchDate < today);
                 
-                if (expired.length === 0) return showToast("No old matches found", "error");
+                if (expired.length === 0) return showToast("لا توجد مباريات قديمة", "error");
 
                 let count = 0;
                 for (const match of expired) {
@@ -310,7 +311,7 @@
                      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(match.id).delete();
                      count++;
                 }
-                showToast(`Deleted ${count} old matches`, "success");
+                showToast(`تم حذف ${count} مباراة قديمة بنجاح`, "success");
                 loadAllMatches();
             };
 
@@ -322,13 +323,13 @@
             };
 
             const joinMatch = async () => {
-                if (!joinCodeInput.trim()) return showToast("Please enter a match code", "error");
+                if (!joinCodeInput.trim()) return showToast("الرجاء إدخال رمز المباراة", "error");
                 const code = joinCodeInput.trim();
                 try {
                     const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(code);
                     const docSnap = await docRef.get();
                     if (!docSnap.exists) {
-                        return showToast("Invalid Match Code. Please check and try again.", "error");
+                        return showToast("الرمز خاطئ، تأكد منه وحاول مجدداً", "error");
                     }
                     setBookingId(code);
                     setView('BOOKING');
@@ -342,19 +343,19 @@
                     }
                 } catch (error) {
                     console.error("Join Error:", error);
-                    showToast("Error checking code", "error");
+                    showToast("حدث خطأ أثناء الاتصال", "error");
                 }
             };
 
             const startCreateProcess = () => {
-                setNewBookingConfig({ title: 'Friendly Match', customId: '', password: '' }); 
+                setNewBookingConfig({ title: 'مباراة ودية', customId: '', password: '' }); 
                 setShowCreateModal(true);
             };
             
             const confirmCreateBooking = async () => {
-                if (!user) return showToast("Connecting...", "error");
+                if (!user) return showToast("جاري الاتصال...", "error");
                 if (!isStrongPassword(newBookingConfig.password)) {
-                     showToast("Password must have: Min 8 chars, 1 Uppercase, 1 Lowercase, 1 Number.", "error");
+                     showToast("كلمة المرور يجب أن تحتوي على 8 خانات، حرف كبير، حرف صغير، ورقم.", "error");
                      return;
                 }
                 let newId = newBookingConfig.customId.trim();
@@ -362,13 +363,16 @@
                      newId = Math.random().toString(36).substring(2, 10);
                 } else {
                     newId = newId.replace(/[^a-zA-Z0-9-_]/g, '');
-                    if (!newId) return showToast("Invalid characters in Match Code", "error");
+                    if (!newId) return showToast("رموز غير صالحة في رمز المباراة", "error");
                 }
+                
                 const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('booking_configs').doc(newId);
                 const docSnap = await docRef.get();
-                if (docSnap.exists) return showToast("Match Code already taken!", "error");
+                if (docSnap.exists) return showToast("هذا الرمز محجوز مسبقاً، اختر غيره!", "error");
+                
                 setShowCreateModal(false);
                 const now = Date.now();
+                
                 try {
                     await docRef.set({
                         ...DEFAULT_CONFIG,
@@ -386,16 +390,18 @@
                     setView('BOOKING');
                     const newUrl = `${window.location.pathname}?id=${newId}`;
                     safePushState({path: newUrl}, '', newUrl);
-                } catch (e) { showToast("Error: " + e.message, "error"); }
+                } catch (e) { 
+                    showToast("Error: " + e.message, "error"); 
+                }
             };
             
             const deleteHistory = (idx) => {
-                if(!confirm("Remove from history?")) return;
+                if(!confirm("إزالة من السجل؟")) return;
                 const h = [...myBookings]; h.splice(idx, 1); setMyBookings(h);
                 localStorage.setItem('bookingHistory', JSON.stringify(h));
             };
             const clearAllHistory = () => {
-                if(!confirm("Clear history?")) return;
+                if(!confirm("مسح جميع السجلات؟")) return;
                 setMyBookings([]); localStorage.removeItem('bookingHistory');
             };
             
@@ -407,7 +413,7 @@
                     setShowAdminAuth(false); 
                     setPasswordInput(''); 
                 } else { 
-                    showToast("Incorrect Password", "error");
+                    showToast("كلمة المرور خاطئة", "error");
                 }
             };
 
@@ -419,7 +425,7 @@
                     setPasswordInput('');
                     loadAllMatches(); 
                 } else {
-                    showToast("Incorrect Master Key", "error");
+                    showToast("المفتاح العام خاطئ", "error");
                 }
             };
             
@@ -436,34 +442,45 @@
             
             const changeAdminPassword = () => {
                 if (!isStrongPassword(newPasswordInput)) {
-                    return showToast("Password must have: Min 8 chars, 1 Uppercase, 1 Lowercase, 1 Number.", "error");
+                    return showToast("كلمة المرور يجب أن تحتوي على 8 خانات، حرف كبير، حرف صغير، ورقم.", "error");
                 }
                 updateSetting('adminPassword', newPasswordInput); 
                 setNewPasswordInput(''); 
-                showToast("Password Updated Successfully", "success");
+                showToast("تم تحديث كلمة المرور", "success");
             };
 
             const uploadImage = (file, field, docId = null) => {
-                if (!file || file.size > IMAGE_SIZE_LIMIT_KB * 1024) return showToast("Image too large (>700KB)", "error");
+                if (!file || file.size > IMAGE_SIZE_LIMIT_KB * 1024) return showToast("حجم الصورة كبير جداً", "error");
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const base64 = e.target.result;
                     if (field === 'paymentInfoImage') updateSetting('paymentInfoImage', base64);
                     else if (field === 'proof' && docId) await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(docId).update({ paymentProof: base64 });
-                    showToast("Image Uploaded!", "success");
+                    showToast("تم رفع الصورة!", "success");
                 };
                 reader.readAsDataURL(file);
             };
+
+            // ADD PLAYER WITH NEW FIELDS
             const addPlayer = async (e) => {
                 e.preventDefault();
                 if (!newName.trim()) return;
-                if (!isAdmin && players.find(p => p.createdBy === user.uid)) return showToast("Already registered!", "error");
-                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).add({ name: newName.trim(), isPaid: false, createdAt: Date.now(), createdBy: user.uid, paymentProof: null });
+                if (!isAdmin && players.find(p => p.createdBy === user.uid)) return showToast("لقد قمت بالتسجيل مسبقاً!", "error");
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).add({ 
+                    name: newName.trim(), 
+                    position: newPosition, // Save chosen position
+                    level: newLevel,       // Save chosen level
+                    isPaid: false, 
+                    createdAt: Date.now(), 
+                    createdBy: user.uid, 
+                    paymentProof: null 
+                });
                 setNewName('');
             };
+
             const togglePaid = (p) => {
                 db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(p.id).update({ isPaid: !p.isPaid })
-                .catch(err => showToast("Error updating: " + err.message, "error"));
+                .catch(err => showToast("خطأ: " + err.message, "error"));
             };
             
             const deletePlayer = (id) => {
@@ -471,18 +488,17 @@
                     const deadlineStr = `${config.matchDate}T${config.withdrawalTime}`;
                     const deadline = new Date(deadlineStr).getTime();
                     if (!isNaN(deadline) && Date.now() > deadline) {
-                         return showToast(`Cannot withdraw. Deadline passed at ${formatTime(config.withdrawalTime)}`, "error");
+                         return showToast(`لا يمكنك الانسحاب، انتهى الوقت المسموح`, "error");
                     }
                 }
-                if(confirm("Delete?")) {
+                if(confirm("تأكيد الحذف؟")) {
                     db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(id).delete()
-                    .catch(err => showToast("Error deleting: " + err.message, "error"));
+                    .catch(err => showToast("خطأ في الحذف: " + err.message, "error"));
                 }
             };
             
             const deleteBookingCompletely = async (idToDelete = bookingId) => {
-                if (!confirm("PERMANENTLY DELETE this booking?")) return;
-                // FIX: Use correct variable name idToDelete instead of bookingId inside map/filter
+                if (!confirm("تحذير: هل أنت متأكد من حذف هذه المباراة نهائياً؟")) return;
                 
                 const playersSnap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${idToDelete}`).get();
                 const batch = db.batch();
@@ -497,54 +513,139 @@
                 setMyBookings(newHistory);
 
                 if (idToDelete === bookingId) {
-                    showToast("Booking Deleted!", "success"); 
+                    showToast("تم الحذف بنجاح!", "success"); 
                     goHome();
                 } else {
                     loadAllMatches();
-                    showToast("Match Deleted", "success");
+                    showToast("تم حذف المباراة", "success");
                 }
             };
+
             const copyCode = () => {
-                navigator.clipboard.writeText(bookingId).then(() => showToast("Match Code Copied!", "success")).catch(() => prompt("Copy Code:", bookingId));
+                navigator.clipboard.writeText(bookingId).then(() => showToast("تم النسخ!", "success")).catch(() => prompt("Copy Code:", bookingId));
             };
             const copyLink = () => {
                 const url = window.location.href;
-                navigator.clipboard.writeText(url).then(() => {showToast('Copied!', 'success')}).catch(() => setShowManualShare(true));
+                navigator.clipboard.writeText(url).then(() => {showToast('تم النسخ!', 'success')}).catch(() => setShowManualShare(true));
             };
 
             const shareToWhatsApp = () => {
-                const text = `⚽ *Stadium Booking Invite*\n\n🏆 Match: ${config.title}\n📅 Date: ${config.matchDate}\n⏰ Time: ${formatTime(config.startTime)} - ${formatTime(config.endTime)}\n\n👇 Click to Join:\n${window.location.href}`;
+                const text = `⚽ *دعوة لمباراة*\n\n🏆 المباراة: ${config.title}\n📅 التاريخ: ${config.matchDate}\n⏰ الوقت: ${formatTime(config.startTime)} - ${formatTime(config.endTime)}\n\n👇 اضغط على الرابط للتسجيل:\n${window.location.href}`;
                 const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
                 window.open(whatsappUrl, '_blank');
             };
 
-            const generateTeams = () => {
+            // SMART TEAM GENERATION (SNAKE DRAFT ALGORITHM)
+            const generateTeamsSmart = () => {
                 const active = players.sort((a,b) => a.createdAt - b.createdAt).slice(0, config.maxPlayers);
-                if(active.length < 2) return showToast("Not enough players!", "error");
-                const shuffled = [...active].sort(() => 0.5 - Math.random());
-                const buckets = Array.from({length: teamCount}, () => []);
-                shuffled.forEach((p, i) => buckets[i % teamCount].push(p.name));
-                let msg = ""; buckets.forEach((bucket, i) => msg += `🏆 TEAM ${i+1} (${bucket.length}):\n${bucket.join('\n')}\n\n`);
-                alert(msg); setShowTeamGen(false);
-            };
-            
-            const resetPlayersList = () => { 
-                if(confirm('Clear all players?')) players.forEach(p=>db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(p.id).delete()); 
+                if(active.length < teamCount) return showToast("عدد اللاعبين غير كافي!", "error");
+
+                // 1. Initialize Teams
+                const teams = Array.from({length: teamCount}, () => ({ players: [], score: 0, count: 0, posCount: {} }));
+                
+                // 2. Group by Position
+                const groups = { 'حارس': [], 'دفاع': [], 'وسط': [], 'هجوم': [] };
+                active.forEach(p => {
+                    const pos = p.position || 'وسط';
+                    if(groups[pos]) groups[pos].push(p);
+                    else groups['وسط'].push(p);
+                });
+
+                // 3. Sort each group by skill (highest first)
+                Object.keys(groups).forEach(pos => {
+                    groups[pos].sort((a, b) => {
+                        const levelA = a.level === 'محترف' ? 3 : a.level === 'متوسط' ? 2 : 1;
+                        const levelB = b.level === 'محترف' ? 3 : b.level === 'متوسط' ? 2 : 1;
+                        return levelB - levelA;
+                    });
+                });
+
+                // 4. Snake Draft Distribution
+                ['حارس', 'دفاع', 'وسط', 'هجوم'].forEach(pos => {
+                    groups[pos].forEach(p => {
+                        // ترتيب الفرق لمعرفة من يستحق اللاعب القادم
+                        teams.sort((a, b) => {
+                            // 1. الأولوية للفريق الذي لديه عدد أقل من هذا المركز
+                            const aPos = a.posCount[pos] || 0;
+                            const bPos = b.posCount[pos] || 0;
+                            if (aPos !== bPos) return aPos - bPos;
+                            
+                            // 2. إذا تساووا في المركز، الأولوية للفريق الأقل في العدد الإجمالي
+                            if (a.count !== b.count) return a.count - b.count;
+                            
+                            // 3. إذا تساووا في العدد، الأولوية للفريق الأضعف (نقاط القوة) لتعويضه!
+                            return a.score - b.score;
+                        });
+                        
+                        // إضافة اللاعب للفريق المستحق
+                        teams[0].players.push(p);
+                        
+                        const pLevel = p.level === 'محترف' ? 3 : p.level === 'متوسط' ? 2 : 1;
+                        // إضافة نقاط المهارة
+                        // الحارس نعطيه وزن إضافي خفي لضمان تعويض الفريق الآخر
+                        const weight = pos === 'حارس' ? pLevel + 2 : pLevel;
+                        teams[0].score += weight;
+                        teams[0].count += 1;
+                        teams[0].posCount[pos] = (teams[0].posCount[pos] || 0) + 1;
+                    });
+                });
+
+                // تنبيهات النقص (تضاف للرسالة تلقائياً)
+                let alerts = "";
+                if (groups['حارس'].length > 0 && groups['حارس'].length < teamCount) {
+                    alerts += "⚠️ *تنبيه:* يوجد نقص في حراس المرمى، تم تعويض الفرق الأخرى بلاعبين ذوي مهارة أعلى لوزن القوة.\n\n";
+                }
+
+                // 5. Output Generation
+                let msg = `⚽ *توزيع الفرق الذكي*\n\n${alerts}`;
+                const posIcon = { 'حارس': '🧤', 'دفاع': '🛡️', 'وسط': '👟', 'هجوم': '⚔️' };
+                
+                // إعادة ترتيب الفرق بناءً على رقمها الأصلي
+                teams.sort((a,b) => teams.indexOf(a) - teams.indexOf(b));
+
+                teams.forEach((team, i) => {
+                    // حساب القوة الفعلية للعرض (بدون الوزن الإضافي للحارس)
+                    const displayScore = team.players.reduce((sum, p) => {
+                        const lvl = p.level === 'محترف' ? 3 : p.level === 'متوسط' ? 2 : 1;
+                        return sum + lvl;
+                    }, 0);
+                    msg += `🏆 *الفريق ${i+1}* (القوة: ${displayScore}):\n`;
+                    
+                    // ترتيب عرض اللاعبين داخل الفريق (حارس ثم دفاع ثم وسط ثم هجوم)
+                    team.players.sort((a,b) => {
+                        const order = {'حارس':1, 'دفاع':2, 'وسط':3, 'هجوم':4};
+                        return (order[a.position] || 5) - (order[b.position] || 5);
+                    }).forEach(p => {
+                        const icon = posIcon[p.position] || '🏃';
+                        const lvlVal = p.level === 'محترف' ? 3 : p.level === 'متوسط' ? 2 : 1;
+                        const stars = "⭐".repeat(lvlVal);
+                        msg += `- ${p.name} ${icon} (${stars})\n`;
+                    });
+                    msg += `\n`;
+                });
+                
+                alert(msg);
+                if(navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(msg).then(() => showToast("تم التوزيع ونسخ النتيجة!", "success")).catch(() => {});
+                }
+                setShowTeamGen(false);
             };
 
-            if (view === 'LOADING') return <div className="flex h-screen items-center justify-center text-white font-bold">Loading...</div>;
+            const resetPlayersList = () => { 
+                if(confirm('هل أنت متأكد من مسح جميع اللاعبين؟')) players.forEach(p=>db.collection('artifacts').doc(appId).collection('public').doc('data').collection(`players_${bookingId}`).doc(p.id).delete()); 
+            };
+
+            if (view === 'LOADING') return <div className="flex h-screen items-center justify-center text-white font-bold">جاري التحميل...</div>;
 
             if (view === 'HOME') return (
                 <div className="min-h-screen bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 relative">
-                    
-                    {/* Hidden Admin Trigger on Title */}
                     
                     {!isAdmin && showAdminAuth && (
                         <div className="absolute top-20 right-4 bg-white p-3 rounded-xl shadow-2xl z-50 flex flex-col gap-2 w-72 max-w-[90vw] border border-gray-200 animate-fade-in">
                             <div className="relative flex items-center">
                                 <input 
                                     type={showPassword ? "text" : "password"} 
-                                    placeholder="Master Key" 
+                                    placeholder="المفتاح العام" 
                                     className="flex-1 p-2 border rounded text-black outline-none pr-10" 
                                     value={passwordInput} 
                                     onChange={e=>setPasswordInput(e.target.value)}
@@ -556,8 +657,8 @@
                                     {showPassword ? <Icons.EyeOff size={18}/> : <Icons.Eye size={18}/>}
                                 </button>
                             </div>
-                            <button onClick={homeAdminLogin} className="bg-indigo-900 text-white px-3 rounded font-bold py-2">Login (Global Admin)</button>
-                             <button onClick={() => {setShowAdminAuth(false); setTitleClicks(0);}} className="text-xs text-gray-400 hover:text-gray-600 mt-1">Cancel</button>
+                            <button onClick={homeAdminLogin} className="bg-indigo-900 text-white px-3 rounded font-bold py-2">دخول المشرف العام</button>
+                             <button onClick={() => {setShowAdminAuth(false); setTitleClicks(0);}} className="text-xs text-gray-400 hover:text-gray-600 mt-1">إلغاء</button>
                         </div>
                     )}
 
@@ -565,37 +666,37 @@
                     {isAdmin ? (
                         <div className="bg-white/95 w-full max-w-2xl p-6 rounded-2xl shadow-2xl text-center relative z-10 h-[80vh] flex flex-col">
                             <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                <h2 className="text-2xl font-bold text-indigo-900 flex items-center gap-2"><Icons.Database size={24}/> All Matches</h2>
+                                <h2 className="text-2xl font-bold text-indigo-900 flex items-center gap-2"><Icons.Database size={24}/> لوحة التحكم الشاملة</h2>
                                 <div className="flex gap-2">
-                                    <button onClick={deleteExpiredMatches} className="text-orange-600 font-bold text-xs border border-orange-200 px-2 py-1 rounded hover:bg-orange-50">Cleanup Old</button>
-                                    <button onClick={()=>setIsAdmin(false)} className="text-red-500 font-bold text-sm border border-red-200 px-2 py-1 rounded hover:bg-red-50">Logout</button>
+                                    <button onClick={deleteExpiredMatches} className="text-orange-600 font-bold text-xs border border-orange-200 px-2 py-1 rounded hover:bg-orange-50">تنظيف القديم</button>
+                                    <button onClick={()=>setIsAdmin(false)} className="text-red-500 font-bold text-sm border border-red-200 px-2 py-1 rounded hover:bg-red-50">خروج</button>
                                 </div>
                             </div>
                             
-                            <div className="flex-1 overflow-y-auto">
+                            <div className="flex-1 overflow-y-auto" dir="rtl">
                                 {allMatches.length === 0 ? (
-                                    <div className="text-gray-400 py-10">Loading matches...</div>
+                                    <div className="text-gray-400 py-10">لا توجد مباريات...</div>
                                 ) : (
                                     <div className="space-y-2">
                                         {allMatches.map(match => (
-                                            <div key={match.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border hover:border-indigo-300 transition">
-                                                <div className="text-left">
+                                            <div key={match.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border hover:border-indigo-300 transition text-right">
+                                                <div className="text-right">
                                                     <div className="font-bold text-indigo-800">{match.title}</div>
-                                                    <div className="text-xs font-mono bg-gray-200 px-1 rounded inline-block">{match.id}</div>
-                                                    <span className="text-xs text-gray-500 ml-2">{match.matchDate}</span>
+                                                    <div className="text-xs font-mono bg-gray-200 px-1 rounded inline-block" dir="ltr">{match.id}</div>
+                                                    <span className="text-xs text-gray-500 mr-2">{match.matchDate}</span>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button 
                                                         onClick={() => { setBookingId(match.id); setView('BOOKING'); safePushState({}, '', `?id=${match.id}`); }} 
                                                         className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold hover:bg-blue-200"
                                                     >
-                                                        Visit
+                                                        زيارة
                                                     </button>
                                                     <button 
                                                         onClick={() => deleteBookingCompletely(match.id)} 
                                                         className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs font-bold hover:bg-red-200"
                                                     >
-                                                        Delete
+                                                        حذف
                                                     </button>
                                                 </div>
                                             </div>
@@ -604,53 +705,53 @@
                                 )}
                             </div>
                             <div className="mt-4 pt-2 border-t text-xs text-gray-400">
-                                Total Matches: {allMatches.length}
+                                إجمالي المباريات: {allMatches.length}
                             </div>
                         </div>
                     ) : (
                         !showCreateModal ? (
-                            <div className="bg-white/95 w-full max-w-md p-6 rounded-2xl shadow-2xl text-center relative z-10">
+                            <div className="bg-white/95 w-full max-w-md p-6 rounded-2xl shadow-2xl text-center relative z-10" dir="rtl">
                                 <h1 
                                     className="text-3xl font-bold text-indigo-900 mb-6 flex items-center justify-center gap-2 cursor-default select-none"
                                     onClick={handleTitleClick}
                                 >
-                                     Stadium Manager
+                                     إدارة الملاعب
                                 </h1>
 
                                 <div className="grid gap-4">
                                     <button onClick={startCreateProcess} disabled={!user} className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:from-indigo-700 hover:to-blue-700 transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
                                         <div className="bg-white/20 p-2 rounded-full"><Icons.UserPlus size={24}/></div>
-                                        <div className="text-left">
-                                            <div className="text-lg leading-none">Create Match</div>
-                                            <div className="text-xs font-normal opacity-80">I am the Admin</div>
+                                        <div className="text-right">
+                                            <div className="text-lg leading-none">إنشاء حجز جديد</div>
+                                            <div className="text-xs font-normal opacity-80">أنا المشرف</div>
                                         </div>
                                     </button>
 
-                                    <div className="bg-gray-5 p-4 rounded-xl border border-gray-200">
-                                        <div className="text-left font-bold text-gray-700 mb-2 flex items-center gap-2"><Icons.Search size={18}/> Join a Match</div>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-right">
+                                        <div className="font-bold text-gray-700 mb-2 flex items-center gap-2"><Icons.Search size={18}/> الانضمام لمباراة</div>
                                         <div className="flex gap-2">
                                             <input 
                                                 type="text" 
-                                                className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-black uppercase tracking-wider font-mono" 
-                                                placeholder="Enter Code"
+                                                className="flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-black uppercase tracking-wider font-mono text-left" 
+                                                placeholder="أدخل الرمز"
                                                 value={joinCodeInput}
                                                 onChange={e => setJoinCodeInput(e.target.value)}
                                             />
-                                            <button onClick={joinMatch} className="bg-gray-800 text-white px-6 rounded-lg font-bold hover:bg-black">JOIN</button>
+                                            <button onClick={joinMatch} className="bg-gray-800 text-white px-6 rounded-lg font-bold hover:bg-black">دخول</button>
                                         </div>
                                     </div>
                                 </div>
 
                                 {myBookings.length > 0 && (
-                                    <div className="text-left mt-8">
-                                        <div className="text-xs font-bold text-gray-400 mb-2 flex justify-between items-center"><span>HISTORY</span><button onClick={clearAllHistory} className="text-red-500 hover:underline">Clear</button></div>
+                                    <div className="text-right mt-8">
+                                        <div className="text-xs font-bold text-gray-400 mb-2 flex justify-between items-center"><span>السجل</span><button onClick={clearAllHistory} className="text-red-500 hover:underline">مسح الكل</button></div>
                                         <div className="space-y-2 max-h-40 overflow-y-auto">
                                             {myBookings.map((b, i) => (
                                                 <div key={i} className="flex items-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200 hover:bg-white transition">
-                                                    <button onClick={() => { setBookingId(b.id); setView('BOOKING'); const url=`?id=${b.id}`; safePushState({path:url},'',url); }} className="flex-1 text-left">
-                                                        <div className="font-bold text-indigo-900 text-sm truncate">{b.title || 'Match'}</div>
-                                                        <span className="font-mono text-gray-400 text-xs">#{b.id}</span>
-                                                        <span className="text-xs text-gray-500 ml-2">{b.date}</span>
+                                                    <button onClick={() => { setBookingId(b.id); setView('BOOKING'); const url=`?id=${b.id}`; safePushState({path:url},'',url); }} className="flex-1 text-right">
+                                                        <div className="font-bold text-indigo-900 text-sm truncate">{b.title || 'مباراة'}</div>
+                                                        <span className="font-mono text-gray-400 text-xs" dir="ltr">#{b.id}</span>
+                                                        <span className="text-xs text-gray-500 mr-2">{b.date}</span>
                                                     </button>
                                                     <button onClick={() => deleteHistory(i)} className="text-gray-400 hover:text-red-600 p-2"><Icons.Trash2 size={16}/></button>
                                                 </div>
@@ -660,57 +761,57 @@
                                 )}
                             </div>
                         ) : (
-                            <div className="bg-white/95 w-full max-w-md p-6 rounded-2xl shadow-2xl relative z-10">
-                                <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2"><Icons.Settings size={20}/> Match Details</h2>
+                            <div className="bg-white/95 w-full max-w-md p-6 rounded-2xl shadow-2xl relative z-10" dir="rtl">
+                                <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2"><Icons.Settings size={20}/> تفاصيل الحجز</h2>
                                 
-                                <div className="mb-4">
-                                    <label className="block text-xs font-bold text-gray-500 mb-1">Match Title</label>
-                                    <input type="text" className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500" value={newBookingConfig.title} onChange={e => setNewBookingConfig({...newBookingConfig, title: e.target.value})} placeholder="e.g. Thursday Game"/>
+                                <div className="mb-4 text-right">
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">اسم المباراة</label>
+                                    <input type="text" className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500 text-right" value={newBookingConfig.title} onChange={e => setNewBookingConfig({...newBookingConfig, title: e.target.value})} placeholder="مثال: مباراة الخميس"/>
                                 </div>
 
-                                <div className="mb-4">
-                                    <label className="block text-xs font-bold text-gray-500 mb-1">Match Code / ID (Optional)</label>
-                                    <div className="flex gap-2 items-center">
+                                <div className="mb-4 text-right">
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">الرمز السري للمباراة (اختياري)</label>
+                                    <div className="flex gap-2 items-center" dir="ltr">
                                         <div className="bg-gray-100 p-2 rounded text-gray-500 font-mono text-sm">#</div>
                                         <input 
                                             type="text" 
                                             className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500 font-mono uppercase" 
                                             value={newBookingConfig.customId} 
                                             onChange={e => setNewBookingConfig({...newBookingConfig, customId: e.target.value})} 
-                                            placeholder="AUTO-GENERATED"
+                                            placeholder="تلقائي"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="mb-6">
-                                    <label className="block text-xs font-bold text-gray-500 mb-1">Set Admin Password</label>
-                                    <div className="relative flex items-center">
+                                <div className="mb-6 text-right">
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">كلمة مرور المشرف</label>
+                                    <div className="relative flex items-center" dir="ltr">
                                         <input 
                                             type={createPassShow ? "text" : "password"} 
-                                            className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500 pr-10" 
+                                            className="w-full p-3 border rounded-lg text-black outline-none focus:border-indigo-500 pl-10 text-right" 
                                             value={newBookingConfig.password} 
                                             onChange={e => setNewBookingConfig({...newBookingConfig, password: e.target.value})} 
-                                            placeholder="Min 8 chars, 1 Up, 1 Low, 1 Num"
+                                            placeholder="8 خانات، حرف كبير وصغير ورقم"
                                         />
                                         <button 
                                             onClick={() => setCreatePassShow(!createPassShow)}
-                                            className="absolute right-2 text-gray-500 hover:text-gray-700"
+                                            className="absolute left-2 text-gray-500 hover:text-gray-700"
                                         >
                                             {createPassShow ? <Icons.EyeOff size={18}/> : <Icons.Eye size={18}/>}
                                         </button>
                                     </div>
-                                    <p className="text-[10px] text-gray-400 mt-1">You will need this password to manage this booking.</p>
+                                    <p className="text-[10px] text-gray-400 mt-1">ستحتاجها لاحقاً لإدارة هذا الحجز.</p>
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <button onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200">Cancel</button>
-                                    <button onClick={confirmCreateBooking} className="flex-1 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700">Create</button>
+                                    <button onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200">إلغاء</button>
+                                    <button onClick={confirmCreateBooking} className="flex-1 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700">إنشاء</button>
                                 </div>
                             </div>
                         )
                     )}
 
-                    {toast && <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-lg shadow-2xl border flex items-center gap-2 animate-fade-in ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>{toast.type === 'error' ? <Icons.X size={20}/> : <Icons.Check size={20}/>}<span className="font-bold text-sm">{toast.msg}</span></div>}
+                    {toast && <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-lg shadow-2xl border flex items-center gap-2 animate-fade-in whitespace-nowrap ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>{toast.type === 'error' ? <Icons.X size={20}/> : <Icons.Check size={20}/>}<span className="font-bold text-sm" dir="rtl">{toast.msg}</span></div>}
                 </div>
             );
 
@@ -725,22 +826,26 @@
             const isDeadlinePassed = !isNaN(deadline) && Date.now() > deadline;
 
             return (
-                <div className="min-h-screen pb-20 bg-black/50 backdrop-blur-sm content-padding">
-                    {toast && <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-lg shadow-2xl border flex items-center gap-2 animate-fade-in ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>{toast.type === 'error' ? <Icons.X size={20}/> : <Icons.Check size={20}/>}<span className="font-bold text-sm">{toast.msg}</span></div>}
+                <div className="min-h-screen pb-20 bg-black/50 backdrop-blur-sm content-padding" dir="rtl">
+                    {toast && <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-lg shadow-2xl border flex items-center gap-2 animate-fade-in whitespace-nowrap ${toast.type === 'error' ? 'bg-red-600 border-red-700 text-white' : 'bg-green-600 border-green-700 text-white'}`}>{toast.type === 'error' ? <Icons.X size={20}/> : <Icons.Check size={20}/>}<span className="font-bold text-sm">{toast.msg}</span></div>}
 
                     <div className="sticky-header bg-indigo-900/95 text-white p-4 shadow-lg backdrop-blur-md border-b border-indigo-800">
                         <div className="max-w-md mx-auto flex justify-between items-center">
-                            <div className="flex-1 min-w-0 pr-2">
+                            <div className="flex-1 min-w-0 pl-2">
                                 <h1 className="font-bold text-lg truncate">{config.title}</h1>
-                                <div className="text-xs opacity-75 flex gap-2 items-center"><Icons.Calendar size={12}/> {config.matchDate} <span className="mx-1">|</span> <Icons.Clock size={12}/> {formatTime(config.startTime)} - {formatTime(config.endTime)}</div>
+                                <div className="text-xs opacity-75 flex gap-2 items-center"><Icons.Calendar size={12}/> {config.matchDate} <span className="mx-1">|</span> <Icons.Clock size={12}/> {formatTime(config.startTime)}</div>
+                                
+                                {/* COUNTDOWN TIMER */}
+                                {timeLeft && <div className="text-[10px] font-bold text-yellow-300 mt-1 animate-pulse" dir="ltr">⏳ {timeLeft}</div>}
+                                
                                 {/* Match Code Display */}
-                                <div className="flex items-center gap-2 mt-1 bg-black/20 w-fit px-2 py-0.5 rounded cursor-pointer hover:bg-black/40 transition" onClick={copyCode}>
+                                <div className="flex items-center gap-2 mt-1 bg-black/20 w-fit px-2 py-0.5 rounded cursor-pointer hover:bg-black/40 transition" onClick={copyCode} dir="ltr">
                                     <span className="text-[10px] font-mono text-indigo-200">CODE:</span>
                                     <span className="text-xs font-bold font-mono text-white">{bookingId}</span>
                                     <Icons.Copy size={10} className="text-indigo-300"/>
                                 </div>
                             </div>
-                            <div className="flex gap-3 items-center flex-shrink-0">
+                            <div className="flex gap-3 items-center flex-shrink-0" dir="ltr">
                                 <button onClick={goHome} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition"><Icons.Home size={20}/></button>
                                 <button onClick={copyLink} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition relative"><Icons.Share size={20}/>{shareMsg && <span className="absolute -bottom-8 right-0 bg-black text-xs px-2 py-1 rounded">{shareMsg}</span>}</button>
                                 <button onClick={() => isAdmin ? setIsAdmin(false) : setShowAdminAuth(!showAdminAuth)} className={`p-2 rounded-full border-2 shadow-md transition ${isAdmin?'bg-yellow-400 text-black border-yellow-500':'bg-white text-black border-gray-300 hover:scale-105'}`}>
@@ -749,94 +854,151 @@
                             </div>
                         </div>
                         {!isAdmin && showAdminAuth && (
-                            <div className="max-w-md mx-auto mt-3 flex gap-2 admin-panel bg-white p-2 rounded-lg shadow-xl animate-fade-in">
+                            <div className="max-w-md mx-auto mt-3 flex gap-2 admin-panel bg-white p-2 rounded-lg shadow-xl animate-fade-in" dir="ltr">
                                 <div className="relative flex-1 flex items-center">
-                                    <input type={showPassword ? "text" : "password"} placeholder="Enter Admin Password" className="w-full p-2 border rounded text-black outline-none pr-10" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)}/>
+                                    <input type={showPassword ? "text" : "password"} placeholder="كلمة المرور" className="w-full p-2 border rounded text-black outline-none pr-10 text-right" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)}/>
                                     <button onClick={() => setShowPassword(!showPassword)} className="absolute right-2 text-gray-500 hover:text-gray-700">{showPassword ? <Icons.EyeOff size={18}/> : <Icons.Eye size={18}/>}</button>
                                 </div>
-                                <button onClick={adminLogin} className="bg-indigo-900 text-white px-4 rounded font-bold hover:bg-indigo-800">Login</button>
+                                <button onClick={adminLogin} className="bg-indigo-900 text-white px-4 rounded font-bold hover:bg-indigo-800">دخول</button>
                             </div>
                         )}
                         {showManualShare && (
-                             <div className="max-w-md mx-auto mt-3 bg-white p-2 rounded text-black flex gap-2"><input readOnly value={window.location.href} className="flex-1 text-xs border p-1"/><button onClick={()=>setShowManualShare(false)}><Icons.X size={16}/></button></div>
+                             <div className="max-w-md mx-auto mt-3 bg-white p-2 rounded text-black flex gap-2" dir="ltr"><input readOnly value={window.location.href} className="flex-1 text-xs border p-1"/><button onClick={()=>setShowManualShare(false)}><Icons.X size={16}/></button></div>
                         )}
                     </div>
 
                     <div className="max-w-md mx-auto p-4 space-y-4 mt-4">
-                        {/* Location Link Display */}
                         {config.location && (
                             <a href={config.location} target="_blank" rel="noopener noreferrer" className="block bg-blue-600/90 text-white p-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition font-bold">
-                                <Icons.MapPin size={20} /> 📍 Location Map
+                                <Icons.MapPin size={20} /> 📍 موقع الملعب
                             </a>
                         )}
 
-                        <div className="bg-white/95 rounded-xl p-4 shadow-xl text-center flex justify-between divide-x mt-2">
-                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">TOTAL</div><div className="font-bold text-indigo-900 text-lg">{config.currency} {config.totalCost}</div></div>
-                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">PER PERSON</div><div className="font-bold text-emerald-600 text-lg">{config.currency} {cost}</div></div>
-                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">SLOTS</div><div className={`font-bold text-lg ${activeList.length>=config.maxPlayers?'text-red-500':'text-indigo-900'}`}>{activeList.length}/{config.maxPlayers}</div></div>
+                        <div className="bg-white/95 rounded-xl p-4 shadow-xl text-center flex justify-between divide-x divide-x-reverse mt-2">
+                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">المقاعد</div><div className={`font-bold text-lg ${activeList.length>=config.maxPlayers?'text-red-500':'text-indigo-900'}`}>{activeList.length}/{config.maxPlayers}</div></div>
+                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">للشخص</div><div className="font-bold text-emerald-600 text-lg" dir="ltr">{cost} {config.currency}</div></div>
+                            <div className="flex-1"><div className="text-xs text-gray-500 font-bold">المجموع</div><div className="font-bold text-indigo-900 text-lg" dir="ltr">{config.totalCost} {config.currency}</div></div>
                         </div>
                         
-                        {isDeadlinePassed && <div className="bg-red-50 text-red-600 p-2 rounded text-center text-xs font-bold border border-red-200 flex items-center justify-center gap-2"><Icons.TimerOff size={14}/> Withdrawal deadline passed ({formatTime(config.withdrawalTime)})</div>}
+                        {isDeadlinePassed && <div className="bg-red-50 text-red-600 p-2 rounded text-center text-xs font-bold border border-red-200 flex items-center justify-center gap-2"><Icons.TimerOff size={14}/> وقت الانسحاب المسموح انتهى</div>}
                         
-                        {config.paymentInfoImage && <div className="flex gap-2"><button onClick={()=>setViewImage(config.paymentInfoImage)} className="w-full bg-white/90 py-3 rounded-lg font-bold text-indigo-700 text-sm shadow flex justify-center gap-2 hover:bg-white transition"><Icons.CreditCard size={18}/> Show Payment Info</button></div>}
+                        {config.paymentInfoImage && <div className="flex gap-2"><button onClick={()=>setViewImage(config.paymentInfoImage)} className="w-full bg-white/90 py-3 rounded-lg font-bold text-indigo-700 text-sm shadow flex justify-center gap-2 hover:bg-white transition"><Icons.CreditCard size={18}/> بيانات الدفع</button></div>}
                         
                         {isAdmin && (
                             <div className="bg-white/95 p-4 rounded-xl shadow-xl admin-panel space-y-4 border-2 border-yellow-400">
-                                <div className="font-bold text-gray-800 border-b pb-2 flex justify-between items-center"><span>⚙️ Admin Control</span><button onClick={()=>setIsAdmin(false)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200 flex gap-1 items-center"><Icons.LogOut size={12}/> Exit Admin</button></div>
-                                <input type="text" value={config.title} onChange={e=>updateSetting('title', e.target.value)} className="w-full border p-2 rounded" placeholder="Event Title"/>
+                                <div className="font-bold text-gray-800 border-b pb-2 flex justify-between items-center"><span>⚙️ تحكم المشرف</span></div>
+                                <input type="text" value={config.title} onChange={e=>updateSetting('title', e.target.value)} className="w-full border p-2 rounded" placeholder="اسم المباراة"/>
                                 
-                                <div><label className="text-xs text-gray-500">Stadium Location (Google Maps Link)</label><input type="text" value={config.location || ''} onChange={e=>updateSetting('location', e.target.value)} className="w-full border p-2 rounded" placeholder="Paste URL here..."/></div>
+                                <div><label className="text-xs text-gray-500">موقع الملعب (Google Maps)</label><input type="text" value={config.location || ''} onChange={e=>updateSetting('location', e.target.value)} className="w-full border p-2 rounded text-left" dir="ltr" placeholder="https://..."/></div>
 
-                                <div className="grid grid-cols-2 gap-2"><input type="time" value={config.startTime} onChange={e=>updateSetting('startTime', e.target.value)} className="border p-2 rounded"/><input type="time" value={config.endTime} onChange={e=>updateSetting('endTime', e.target.value)} className="border p-2 rounded"/><input type="number" value={config.totalCost} onChange={e=>updateSetting('totalCost', Number(e.target.value))} className="border p-2 rounded" placeholder="Cost"/><input type="number" value={config.maxPlayers} onChange={e=>updateSetting('maxPlayers', Number(e.target.value))} className="border p-2 rounded" placeholder="Max"/></div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div><label className="text-xs text-gray-500">Date</label><input type="date" value={config.matchDate} onChange={e=>updateSetting('matchDate', e.target.value)} className="w-full border p-2 rounded"/></div>
-                                    <div><label className="text-xs text-red-500 font-bold">Lock Withdrawal</label><input type="datetime-local" value={config.withdrawalTime} onChange={e=>updateSetting('withdrawalTime', e.target.value)} className="w-full border p-2 rounded border-red-200"/></div>
+                                <div className="grid grid-cols-2 gap-2" dir="ltr"><input type="time" value={config.startTime} onChange={e=>updateSetting('startTime', e.target.value)} className="border p-2 rounded"/><input type="time" value={config.endTime} onChange={e=>updateSetting('endTime', e.target.value)} className="border p-2 rounded"/><input type="number" value={config.totalCost} onChange={e=>updateSetting('totalCost', Number(e.target.value))} className="border p-2 rounded" placeholder="Cost"/><input type="number" value={config.maxPlayers} onChange={e=>updateSetting('maxPlayers', Number(e.target.value))} className="border p-2 rounded" placeholder="Max Slots"/></div>
+                                <div className="grid grid-cols-2 gap-2" dir="ltr">
+                                    <div><label className="text-xs text-gray-500 text-right block">التاريخ</label><input type="date" value={config.matchDate} onChange={e=>updateSetting('matchDate', e.target.value)} className="w-full border p-2 rounded"/></div>
+                                    <div><label className="text-xs text-red-500 font-bold text-right block">قفل الانسحاب</label><input type="datetime-local" value={config.withdrawalTime} onChange={e=>updateSetting('withdrawalTime', e.target.value)} className="w-full border p-2 rounded border-red-200"/></div>
                                 </div>
-                                <div className="flex items-center gap-2 bg-gray-100 p-2 rounded"><div className="text-xs font-bold text-gray-500">QR Image:</div><input type="file" onChange={e=>uploadImage(e.target.files[0], 'paymentInfoImage')} className="text-xs"/></div>
-                                <div className="bg-gray-100 p-2 rounded mt-2"><div className="text-xs font-bold text-gray-500 mb-1">Security (Password)</div><div className="flex gap-2"><input type="text" value={newPasswordInput} onChange={e=>setNewPasswordInput(e.target.value)} className="flex-1 border p-1 rounded text-xs" placeholder="New Password"/><button onClick={changeAdminPassword} className="bg-slate-800 text-white px-3 py-1 rounded text-xs font-bold">Update</button></div></div>
+                                <div className="flex items-center gap-2 bg-gray-100 p-2 rounded"><div className="text-xs font-bold text-gray-500">صورة للدفع:</div><input type="file" onChange={e=>uploadImage(e.target.files[0], 'paymentInfoImage')} className="text-xs w-full"/></div>
+                                <div className="bg-gray-100 p-2 rounded mt-2"><div className="text-xs font-bold text-gray-500 mb-1">الرقم السري</div><div className="flex gap-2"><input type="text" value={newPasswordInput} onChange={e=>setNewPasswordInput(e.target.value)} className="flex-1 border p-1 rounded text-xs text-left" dir="ltr" placeholder="تغيير الرقم"/><button onClick={changeAdminPassword} className="bg-slate-800 text-white px-3 py-1 rounded text-xs font-bold">تحديث</button></div></div>
                                 <div className="flex flex-col gap-2 pt-2">
                                     <div className="flex gap-2">
-                                        <button onClick={()=>setShowTeamGen(true)} className="flex-1 bg-blue-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-blue-600">Make Teams</button>
-                                        <button onClick={resetPlayersList} className="flex-1 bg-orange-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-orange-600">Reset Players</button>
+                                        <button onClick={()=>setShowTeamGen(true)} className="flex-1 bg-blue-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-blue-600">تقسيم الفرق</button>
+                                        <button onClick={resetPlayersList} className="flex-1 bg-orange-500 text-white py-2 rounded text-sm font-bold shadow hover:bg-orange-600">مسح اللاعبين</button>
                                     </div>
-                                    <button onClick={() => deleteBookingCompletely(bookingId)} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">DELETE BOOKING PERMANENTLY</button>
+                                    <button onClick={() => deleteBookingCompletely(bookingId)} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-red-700">حذف المباراة نهائياً</button>
                                 </div>
                             </div>
                         )}
                         {myEntry && !isAdmin ? (
                             <div className="bg-emerald-100/95 p-4 rounded-xl border-2 border-emerald-400 text-center shadow-lg animate-fade-in">
-                                <div className="text-emerald-800 font-bold text-lg">✅ You are registered!</div><div className="text-emerald-600 font-bold text-xl my-1">{myEntry.name}</div>
-                                <div className="mt-3 pt-3 border-t border-emerald-200 flex gap-2 justify-center"><label className="bg-white text-emerald-700 px-4 py-2 rounded-lg cursor-pointer font-bold text-xs hover:bg-emerald-50 shadow flex items-center gap-2"><Icons.Upload size={14}/> {myEntry.paymentProof ? 'Change' : 'Upload'} Receipt<input type="file" className="hidden" onChange={e=>uploadImage(e.target.files[0], 'proof', myEntry.id)} /></label>{myEntry.paymentProof && <button onClick={()=>setViewImage(myEntry.paymentProof)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-emerald-700 shadow flex items-center gap-2"><Icons.Eye size={14}/> View</button>}</div>
+                                <div className="text-emerald-800 font-bold text-lg">✅ أنت مسجل في المباراة!</div><div className="text-emerald-600 font-bold text-xl my-1">{myEntry.name}</div>
+                                <div className="text-xs text-gray-600 mt-1">{myEntry.position} | {myEntry.level}</div>
+                                <div className="mt-3 pt-3 border-t border-emerald-200 flex gap-2 justify-center"><label className="bg-white text-emerald-700 px-4 py-2 rounded-lg cursor-pointer font-bold text-xs hover:bg-emerald-50 shadow flex items-center gap-2"><Icons.Upload size={14}/> {myEntry.paymentProof ? 'تغيير' : 'إرفاق'} إيصال الدفع<input type="file" className="hidden" onChange={e=>uploadImage(e.target.files[0], 'proof', myEntry.id)} /></label>{myEntry.paymentProof && <button onClick={()=>setViewImage(myEntry.paymentProof)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-emerald-700 shadow flex items-center gap-2"><Icons.Eye size={14}/> عرض</button>}</div>
                             </div>
                         ) : (
                             (!isAdmin && activeList.length >= config.maxPlayers) ? (
-                                <form onSubmit={addPlayer} className="bg-orange-100/95 p-4 rounded-xl border-2 border-orange-300 shadow-lg"><div className="text-orange-800 font-bold mb-2 flex items-center gap-2">⚠️ List Full! Join Waitlist:</div><div className="flex gap-2"><input className="flex-1 p-3 rounded-lg border border-orange-200 outline-none" placeholder="Your Name..." value={newName} onChange={e=>setNewName(e.target.value)}/><button className="bg-orange-500 text-white px-6 rounded-lg font-bold hover:bg-orange-600 shadow">Join</button></div></form>
+                                <form onSubmit={addPlayer} className="bg-orange-100/95 p-4 rounded-xl border-2 border-orange-300 shadow-lg"><div className="text-orange-800 font-bold mb-2 flex items-center gap-2">⚠️ القائمة ممتلئة! سجل في الاحتياط:</div>
+                                    <input className="w-full p-3 mb-2 bg-white rounded-lg outline-none border border-orange-200 text-lg" placeholder="أدخل اسمك..." value={newName} onChange={e=>setNewName(e.target.value)}/>
+                                    <div className="flex gap-2 mb-2">
+                                        <select className="flex-1 p-2 bg-white border border-orange-200 rounded-lg outline-none text-sm text-gray-700" value={newPosition} onChange={e=>setNewPosition(e.target.value)}><option value="هجوم">هجوم ⚽</option><option value="وسط">وسط 🎯</option><option value="دفاع">دفاع 🛡️</option><option value="حارس">حارس 🧤</option></select>
+                                        <select className="flex-1 p-2 bg-white border border-orange-200 rounded-lg outline-none text-sm text-gray-700" value={newLevel} onChange={e=>setNewLevel(e.target.value)}><option value="محترف">محترف ⭐️⭐️⭐️</option><option value="متوسط">متوسط ⭐️⭐️</option><option value="مبتدئ">مبتدئ ⭐️</option></select>
+                                    </div>
+                                    <button className="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 shadow">احتياط</button>
+                                </form>
                             ) : (
-                                <form onSubmit={addPlayer} className="bg-white/95 p-4 rounded-xl shadow-lg flex gap-2 border-2 border-indigo-100"><input className="flex-1 p-3 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-200 text-lg" placeholder={isAdmin ? "Add Player Manually..." : "Enter Your Name..."} value={newName} onChange={e=>setNewName(e.target.value)}/><button className="bg-indigo-600 text-white px-6 rounded-lg font-bold hover:bg-indigo-700 shadow text-lg">JOIN</button></form>
+                                <form onSubmit={addPlayer} className="bg-white/95 p-4 rounded-xl shadow-lg border-2 border-indigo-100 flex flex-col gap-3">
+                                    <input className="w-full p-3 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-200 text-lg" placeholder={isAdmin ? "إضافة لاعب يدوياً..." : "أدخل اسمك..."} value={newName} onChange={e=>setNewName(e.target.value)}/>
+                                    <div className="flex gap-2">
+                                        <select className="flex-1 p-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm text-gray-700" value={newPosition} onChange={e=>setNewPosition(e.target.value)}>
+                                            <option value="هجوم">هجوم ⚽</option>
+                                            <option value="وسط">وسط 🎯</option>
+                                            <option value="دفاع">دفاع 🛡️</option>
+                                            <option value="حارس">حارس 🧤</option>
+                                        </select>
+                                        <select className="flex-1 p-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm text-gray-700" value={newLevel} onChange={e=>setNewLevel(e.target.value)}>
+                                            <option value="محترف">محترف ⭐️⭐️⭐️</option>
+                                            <option value="متوسط">متوسط ⭐️⭐️</option>
+                                            <option value="مبتدئ">مبتدئ ⭐️</option>
+                                        </select>
+                                    </div>
+                                    <button className="bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 shadow text-lg w-full">انضمام للمباراة</button>
+                                </form>
                             )
                         )}
                         <div className="space-y-2">
                             {activeList.map((p, i) => (
                                 <div key={p.id} className="bg-white/90 backdrop-blur-sm p-3 rounded-xl flex items-center justify-between shadow-sm border border-white/20">
-                                    <div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${p.isPaid?'bg-emerald-100 text-emerald-700':'bg-gray-200 text-gray-500'}`}>{i+1}</div><div><div className="font-bold text-gray-800 text-lg">{p.name}</div><div className="flex gap-2 text-xs items-center mt-1">{isAdmin ? <button onClick={()=>togglePaid(p)} className={`px-2 py-0.5 rounded font-bold ${p.isPaid?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}`}>{p.isPaid?'PAID':'UNPAID'}</button> : <span className={`font-bold ${p.isPaid?'text-emerald-600':'text-red-400'}`}>{p.isPaid?'PAID':'UNPAID'}</span>}{(p.paymentProof && (isAdmin || (user && user.uid === p.createdBy))) && <button onClick={()=>setViewImage(p.paymentProof)} className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1 font-bold hover:bg-blue-100"><Icons.Image size={12}/> Receipt</button>}</div></div></div>{(isAdmin || (user && user.uid === p.createdBy && !isDeadlinePassed)) && <button onClick={()=>deletePlayer(p.id)} className="text-gray-400 hover:text-red-500 p-2"><Icons.Trash2 size={20}/></button>}
+                                    <div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0 ${p.isPaid?'bg-emerald-100 text-emerald-700':'bg-gray-200 text-gray-500'}`}>{i+1}</div>
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-lg leading-none">{p.name}</div>
+                                        <div className="flex gap-2 text-[10px] items-center mt-2 flex-wrap">
+                                            {p.position && <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold border border-blue-100">{p.position} | {p.level}</span>}
+                                            {isAdmin ? <button onClick={()=>togglePaid(p)} className={`px-2 py-0.5 rounded font-bold ${p.isPaid?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}`}>{p.isPaid?'مدفوع':'غير مدفوع'}</button> : <span className={`font-bold ${p.isPaid?'text-emerald-600':'text-red-400'}`}>{p.isPaid?'مدفوع':'غير مدفوع'}</span>}
+                                            {(p.paymentProof && (isAdmin || (user && user.uid === p.createdBy))) && <button onClick={()=>setViewImage(p.paymentProof)} className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1 font-bold hover:bg-blue-100"><Icons.Image size={12}/> المرفق</button>}
+                                        </div>
+                                    </div></div>{(isAdmin || (user && user.uid === p.createdBy && !isDeadlinePassed)) && <button onClick={()=>deletePlayer(p.id)} className="text-gray-400 hover:text-red-500 p-2"><Icons.Trash2 size={20}/></button>}
                                 </div>
                             ))}
                         </div>
                         {waitList.length > 0 && (
-                            <div className="mt-6"><div className="text-white font-bold text-sm mb-2 opacity-90 uppercase tracking-wider">Waitlist</div>{waitList.map((p, i) => (<div key={p.id} className="bg-orange-50/90 p-3 rounded-xl flex justify-between items-center mb-2 border border-orange-200 shadow-sm"><div className="flex items-center gap-3"><span className="font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded text-xs">W-{i+1}</span><span className="font-bold text-slate-700">{p.name}</span></div>{(isAdmin || (user && user.uid === p.createdBy && !isDeadlinePassed)) && <button onClick={()=>deletePlayer(p.id)} className="text-orange-400 hover:text-red-500"><Icons.Trash2 size={18}/></button>}</div>))}</div>
+                            <div className="mt-6"><div className="text-white font-bold text-sm mb-2 opacity-90 uppercase">قائمة الاحتياط</div>{waitList.map((p, i) => (<div key={p.id} className="bg-orange-50/90 p-3 rounded-xl flex justify-between items-center mb-2 border border-orange-200 shadow-sm"><div className="flex items-center gap-3"><span className="font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded text-xs flex-shrink-0">W-{i+1}</span>
+                            <div>
+                                <div className="font-bold text-slate-700 leading-none">{p.name}</div>
+                                {p.position && <div className="text-[10px] text-gray-500 mt-1">{p.position} | {p.level}</div>}
+                            </div>
+                            </div>{(isAdmin || (user && user.uid === p.createdBy && !isDeadlinePassed)) && <button onClick={()=>deletePlayer(p.id)} className="text-orange-400 hover:text-red-500 p-2"><Icons.Trash2 size={18}/></button>}</div>))}</div>
                         )}
                         
                         {/* WhatsApp Share Button */}
                         <div className="mt-4 flex justify-center pb-6">
                             <button onClick={shareToWhatsApp} className="bg-[#25D366] text-white py-3 px-6 rounded-full font-bold shadow-lg flex items-center gap-2 hover:bg-[#20bd5a] transition transform hover:scale-105">
-                                <Icons.Whatsapp size={24} /> Share via WhatsApp
+                                <Icons.Whatsapp size={24} /> إرسال في واتساب
                             </button>
                         </div>
 
                     </div>
 
                     {viewImage && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" onClick={()=>setViewImage(null)}><img src={viewImage} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl border-4 border-white"/></div>}
-                    {showTeamGen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={()=>setShowTeamGen(false)}><div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" onClick={e=>e.stopPropagation()}><div className="bg-indigo-600 p-4 text-white font-bold flex justify-between items-center"><span className="flex items-center gap-2"><Icons.Activity size={20}/> Team Generator</span><button onClick={()=>setShowTeamGen(false)}><Icons.X size={24}/></button></div><div className="p-6 text-center"><div className="flex items-center justify-center gap-6 mb-8"><button className="bg-gray-200 w-12 h-12 rounded-full font-bold text-2xl hover:bg-gray-300 flex items-center justify-center shadow" onClick={()=>setTeamCount(Math.max(2, teamCount-1))}>-</button><div className="text-center"><span className="block font-bold text-3xl text-indigo-900">{teamCount}</span><span className="text-xs text-gray-500 uppercase font-bold">Teams</span></div><button className="bg-gray-200 w-12 h-12 rounded-full font-bold text-2xl hover:bg-gray-300 flex items-center justify-center shadow" onClick={()=>setTeamCount(teamCount+1)}>+</button></div><button onClick={generateTeams} className="bg-indigo-600 text-white px-6 py-4 rounded-xl font-bold w-full shadow-lg hover:bg-indigo-700 text-lg">SHUFFLE & SHOW</button></div></div></div>}
+                    
+                    {/* Team Generator Modal */}
+                    {showTeamGen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={()=>setShowTeamGen(false)}>
+                        <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" onClick={e=>e.stopPropagation()}>
+                            <div className="bg-indigo-600 p-4 text-white font-bold flex justify-between items-center">
+                                <span className="flex items-center gap-2"><Icons.Activity size={20}/> التوزيع الذكي للفرق</span>
+                                <button onClick={()=>setShowTeamGen(false)}><Icons.X size={24}/></button>
+                            </div>
+                            <div className="p-6 text-center">
+                                <div className="text-xs text-gray-500 mb-4">يتم توزيع اللاعبين آلياً لموازنة الدفاع والهجوم والقوة</div>
+                                <div className="flex items-center justify-center gap-6 mb-8">
+                                    <button className="bg-gray-200 w-12 h-12 rounded-full font-bold text-2xl hover:bg-gray-300 flex items-center justify-center shadow" onClick={()=>setTeamCount(Math.max(2, teamCount-1))}>-</button>
+                                    <div className="text-center">
+                                        <span className="block font-bold text-3xl text-indigo-900">{teamCount}</span>
+                                        <span className="text-xs text-gray-500 font-bold">عدد الفرق</span>
+                                    </div>
+                                    <button className="bg-gray-200 w-12 h-12 rounded-full font-bold text-2xl hover:bg-gray-300 flex items-center justify-center shadow" onClick={()=>setTeamCount(teamCount+1)}>+</button>
+                                </div>
+                                <button onClick={generateTeamsSmart} className="bg-indigo-600 text-white px-6 py-4 rounded-xl font-bold w-full shadow-lg hover:bg-indigo-700 text-lg">تقسيم ونسخ النتيجة</button>
+                            </div>
+                        </div>
+                    </div>}
                 </div>
             );
         }
