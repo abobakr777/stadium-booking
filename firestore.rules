@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signed() { return request.auth != null; }
+  function globalAdmin() { return signed() && request.auth.token.email_verified == true && request.auth.token.globalAdmin == true; }
+  function manager(id) { return signed() && request.auth.token.email_verified == true && (get(/databases/$(database)/documents/matches/$(id)).data.ownerUid == request.auth.uid || globalAdmin()); }
+  function live(id) { return get(/databases/$(database)/documents/matches/$(id)).data.state == 'open'; }
+  match /matches/{id} {
+   allow get: if resource.data.state == 'open' || manager(id);
+   allow list: if globalAdmin() || (signed() && request.auth.token.email_verified == true && resource.data.ownerUid == request.auth.uid);
+   allow write: if false;
+   match /players/{uid} {
+    allow read: if signed() && live(id);
+    allow write: if false;
+   }
+   match /payments/{uid} {
+    allow get: if signed() && live(id) && (request.auth.uid == uid || manager(id));
+    allow list: if manager(id) && live(id);
+    allow write: if false;
+   }
+   match /private/{doc} {
+    allow read: if live(id) && (manager(id) || (signed() && exists(/databases/$(database)/documents/matches/$(id)/players/$(request.auth.uid))));
+    allow write: if false;
+   }
+  }
+  match /{document=**} { allow read, write: if false; }
+ }
+}

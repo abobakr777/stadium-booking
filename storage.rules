@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+ match /b/{bucket}/o {
+  // Uploads use the callable backend: actual image decoding, pixel and byte limits,
+  // metadata stripping, no client-controlled download tokens or paths.
+  match /proofs/{matchId}/{uid}/{file} {
+   allow read: if request.auth != null
+    && firestore.get(/databases/(default)/documents/matches/$(matchId)).data.state == 'open'
+    && (request.auth.uid == uid || (request.auth.token.email_verified == true &&
+      (request.auth.token.globalAdmin == true || firestore.get(/databases/(default)/documents/matches/$(matchId)).data.ownerUid == request.auth.uid)))
+    && firestore.get(/databases/(default)/documents/matches/$(matchId)/payments/$(uid)).data.proofPath == 'proofs/' + matchId + '/' + uid + '/' + file;
+   allow write: if false;
+  }
+  match /{path=**} { allow read, write: if false; }
+ }
+}

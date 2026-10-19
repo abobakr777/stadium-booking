@@ -1,0 +1,11 @@
+✔ teams preserve input, stable IDs, balanced sizes, goalkeeper distribution (1.7377ms)
+✔ zero keepers warns and invalid team counts fail (0.3348ms)
+✔ exact schemas reject injected owner/paid flags and unsafe URLs (0.4558ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 504.9395

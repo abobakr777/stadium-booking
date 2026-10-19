@@ -1,0 +1,22 @@
+✔ real Auth email registration/login/logout/reset/verification messages (1270.5301ms)
+✔ verified owner creates match; anonymous and unverified owners rejected (3146.7265ms)
+✔ public metadata get only; roster requires auth; owner query satisfies rules (477.255ms)
+✔ Firestore denies direct settings/owner/payment/role writes and deletion (3534.7573ms)
+✔ backend checks ownership independently and rejects injected fields (3255.8865ms)
+✔ duplicate registration and client controlled queue/paid fields rejected (271.2691ms)
+✔ simultaneous joins preserve capacity and strict sequence; simultaneous withdrawals promote oldest (13065.5069ms)
+✔ players cannot delete another player; deadlines use server time; admin overrides (291.8806ms)
+✔ capacity edits rebalance in order; self withdrawal before deadline works (9124.288ms)
+✔ private payment docs and instructions restricted; owner/global can mark paid (6063.0993ms)
+✔ server image validation rejects invalid/oversized/spoofed uploads (3016.3791ms)
+✔ private proof roundtrip; Storage rules block other users and all raw uploads (4235.8183ms)
+✔ owner manual management and roster reset preserve future queue consistency (3169.6626ms)
+✔ unauthorized deletion rejected; global deletion removes descendants and tombstones code (3355.6889ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 55506.4215
